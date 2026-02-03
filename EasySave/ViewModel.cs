@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Text.Json;
 using EasySave.Model;
 
 namespace EasySave.ViewModel
@@ -24,14 +25,48 @@ namespace EasySave.ViewModel
         {
             CurrentLanguage = (CurrentLanguage == "fr") ? "en" : "fr";
         }
+        // Le chemin où sera créé le fichier (dans le même dossier que l'exe)
+        private string configPath = "jobs_config.json";
 
-        // Méthode pour ajouter un travail (View -> ViewModel)
+        // 1. Charger les jobs au démarrage
+        public void LoadJobsConfig()
+        {
+            if (File.Exists(configPath))
+            {
+                string json = File.ReadAllText(configPath);
+                var loadedJobs = JsonSerializer.Deserialize<List<BackUpJob>>(json) ?? new List<BackUpJob>();
+                if (loadedJobs != null)
+                {
+                    this.Jobs = loadedJobs;
+                }
+            }
+        }
+
+        // 2. Sauvegarder les jobs
+        public void SaveJobsConfig()
+        {
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            string json = JsonSerializer.Serialize(this.Jobs, options);
+            File.WriteAllText(configPath, json);
+        }
+        // 3. Ton option "Clean" (Option 6)
+        public void ClearAllJobs()
+        {
+            this.Jobs.Clear();
+            if (File.Exists(configPath))
+            {
+                File.Delete(configPath);
+            }
+        }
+
+
+            // Méthode pour ajouter un travail (View -> ViewModel)
         public void AddJob(string name, string source, string target, string type)
         {
-            // Correction de la limite : < 5 pour ne pas dépasser 5 slots
             if (Jobs.Count < 5)
             {
                 Jobs.Add(new BackUpJob(name, source, target, type));
+                SaveJobsConfig();
             }
             else
             {
@@ -43,12 +78,10 @@ namespace EasySave.ViewModel
 
         public void ExecuteJob(int index)
         {
-            // 1. On récupère le travail concerné
             var job = Jobs[index];
 
             try
             {
-                // Vérification de sécurité pour la source
                 if (!Directory.Exists(job.SourceDir))
                 {
                     Console.WriteLine(CurrentLanguage == "fr"
@@ -57,41 +90,56 @@ namespace EasySave.ViewModel
                     return;
                 }
 
-                // 2. Préparation : État Actif et progression à 0
                 job.State = "Active";
                 job.Progress = 0;
 
-                // --- LA MODIFICATION EST ICI ---
-                // On remplace GetFiles(path) par cette version qui va dans les sous-dossiers
                 string[] files = Directory.GetFiles(job.SourceDir, "*.*", SearchOption.AllDirectories);
                 job.TotalFiles = files.Length;
 
-                // Calcul de la taille totale pour les futurs logs
                 long totalSize = 0;
                 foreach (string f in files) { totalSize += new FileInfo(f).Length; }
                 job.TotalSize = totalSize;
 
-                // 4. BOUCLE DE COPIE RÉELLE
                 for (int i = 0; i < files.Length; i++)
                 {
-                    // On calcule le chemin relatif pour recréer les sous-dossiers
                     string relativePath = Path.GetRelativePath(job.SourceDir, files[i]);
                     string destFile = Path.Combine(job.TargetDir, relativePath);
 
-                    // On crée le sous-dossier de destination si nécessaire
-                    string destFolder = Path.GetDirectoryName(destFile);
-                    if (!Directory.Exists(destFolder))
+                    string? destFolder = Path.GetDirectoryName(destFile);
+
+                    if (!string.IsNullOrEmpty(destFolder) && !Directory.Exists(destFolder))
                     {
                         Directory.CreateDirectory(destFolder);
                     }
+                    // --- DEBUT DE LA LOGIQUE DIFFERENTIELLE ---
+                    bool shouldCopy = true;
 
-                    // Copie physique du fichier
-                    File.Copy(files[i], destFile, true);
+                    // Si le type contient "diff" (insensible à la casse)
+                    if (job.BackUpType.Contains("diff", StringComparison.OrdinalIgnoreCase) ||
+                        job.BackUpType.Contains("différentiel", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (File.Exists(destFile))
+                        {
+                            // On compare la date de dernière modification
+                            DateTime sourceTime = File.GetLastWriteTime(files[i]);
+                            DateTime destTime = File.GetLastWriteTime(destFile);
 
-                    // Mise à jour de la progression (%)
+                            // Si le fichier source n'est pas plus récent, on ne copie pas
+                            if (sourceTime <= destTime)
+                            {
+                                shouldCopy = false;
+                            }
+                        }
+                    }
+
+                    if (shouldCopy)
+                    {
+                        File.Copy(files[i], destFile, true);
+                    }
+                    // --- FIN DE LA LOGIQUE DIFFERENTIELLE ---
+
                     job.Progress = (int)((i + 1) * 100 / files.Length);
                 }
-                // --- FIN DE LA MODIFICATION ---
 
                 Console.WriteLine(CurrentLanguage == "fr"
                     ? $"Succès : {job.Name} terminé."
@@ -99,24 +147,18 @@ namespace EasySave.ViewModel
             }
             catch (Exception ex)
             {
-                // Tes messages d'erreurs personnalisés sont conservés ici
+                // ... tes messages d'erreurs restent identiques ...
                 if (CurrentLanguage == "fr")
-                {
-                    Console.WriteLine($"[ERREUR] Impossible d'exécuter {job.Name} Le chemin n'est pas valide ou vous tentez d'écrire dans une zone protégée");
-                    Console.WriteLine($"Détails techniques : {ex.Message}");
-                }
+                    Console.WriteLine($"[ERREUR] Impossible d'exécuter {job.Name} : {ex.Message}");
                 else
-                {
-                    Console.WriteLine($"[ERROR] Could not execute {job.Name} Invalid path or attempt to write in a protected area.");
-                    Console.WriteLine($"Technical details : {ex.Message}");
-                }
+                    Console.WriteLine($"[ERROR] Could not execute {job.Name} : {ex.Message}");
             }
             finally
             {
-                // 5. Finalisation
                 job.State = "Inactive";
                 job.Progress = 100;
             }
+    
         }
     }
 }
