@@ -1,9 +1,10 @@
-﻿using System;
-using System.IO;
-using System.Collections.Generic;
-using System.Text.Json;
+﻿using EasyLog;
 using EasySave.Model;
-
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Text.Json;
 namespace EasySave.ViewModel
 {
     /// <summary> Chef d'orchestre du ViewModel
@@ -39,7 +40,9 @@ namespace EasySave.ViewModel
         /// </summary>
         private string configPath = "jobs_config.json";
 
-
+        private StateService _stateService = new StateService();
+        private readonly Logger _logger = new Logger();
+        private readonly Stopwatch stopwatch = new Stopwatch();
         //--------------------------------------------------------------------------------------------
         // Partie sur la gestion de la liste des Jobs et le fichier JSON les contenant
         //--------------------------------------------------------------------------------------------
@@ -172,7 +175,7 @@ namespace EasySave.ViewModel
                 // Initialisation de l'état et de la progression, nécessaire pour les logs
                 job.State = "Active";
                 job.Progress = 0;
-
+                _stateService.UpdateState(job); // pour le stateservice: suivi en direct
                 // Récupération de tous les fichiers ceux présents à la racine et ceux dans des sous-dossiers
                 string[] files = Directory.GetFiles(job.SourceDir, "*.*", SearchOption.AllDirectories);
 
@@ -233,14 +236,28 @@ namespace EasySave.ViewModel
                         // Si on a toujours l'autorisation on réalise la copie 
                         if (canStartCopy)
                     {
+                        FileInfo fileInfo = new FileInfo(files[i]);
+
+                        stopwatch.Restart();
                         File.Copy(files[i], destFile, true);
+                        stopwatch.Stop();
+
+                        _logger.WriteLog(new LogEntry
+                        {
+                            JobName = job.Name,
+                            SourcePath = files[i],
+                            TargetPath = destFile,
+                            FileSize = fileInfo.Length,
+                            TransferTimeMs = stopwatch.Elapsed.TotalMilliseconds
+                        });
                     }
 
-                        // Calcul du pourcentage de progression
-                        // (i + 1) : Nombre de fichiers traités (on ajoute 1 car l'index 'i' commence à 0).
-                        // * 100 pour avoir un pourcentage
-                        // div par files.Length : nombre total de fichiers
-                        job.Progress = (int)((i + 1) * 100 / files.Length);
+                    // Calcul du pourcentage de progression
+                    // (i + 1) : Nombre de fichiers traités (on ajoute 1 car l'index 'i' commence à 0).
+                    // * 100 pour avoir un pourcentage
+                    // div par files.Length : nombre total de fichiers
+                    job.Progress = (int)((i + 1) * 100 / files.Length);
+                    _stateService.UpdateState(job);
                 }
 
                 Console.WriteLine(CurrentLanguage == "fr"
@@ -259,6 +276,7 @@ namespace EasySave.ViewModel
             {   // Remise à l'état inactif
                 job.State = "Inactive";
                 job.Progress = 100;
+                _stateService.UpdateState(job);
             }
     
         }
