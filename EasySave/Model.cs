@@ -31,7 +31,7 @@ namespace EasySave.Model
         public int Progress { get; set; }
 
         /// <summary> Constructeur sans paramètres requis par le Jsonserializer. </summary>
-        public BackUpJob() { } // necessaire pour le Jsonserializer qui permet de creer le json qui sauvegarde les jobs pour les avoir lors d'un nouveau lancement de console
+        public BackUpJob() { } // nécessaire pour le Jsonserializer qui permet de creer le json qui sauvegarde les jobs pour les avoir lors d'un nouveau lancement de console
 
         /// <summary> Initialiser un nouveau travail de sauvegarde avec ses paramètres de base. </summary>
         /// <param name="name">Nom du travail de sauvegarde.</param>
