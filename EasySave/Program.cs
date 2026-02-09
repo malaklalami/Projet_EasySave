@@ -11,7 +11,7 @@ namespace EasySave
             ConsoleView view = new ConsoleView();
 
             // On lance la boucle infinie du menu
-            view.Start();
+            view.ViewModel.Start();
         }
     }
 }

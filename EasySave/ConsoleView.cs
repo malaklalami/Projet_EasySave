@@ -1,50 +1,60 @@
 ﻿using System;
+using EasyLibrary.Models;
 using EasySave.ViewModel;
 
 
 namespace EasySave.View
 {
-    public class ConsoleView
+    public class ConsoleView : IVue
     {
-        private MainViewModel _viewModel;
+        public MainViewModel ViewModel { get; set; }
 
         public ConsoleView()
         {
-            _viewModel = new MainViewModel();
+            ViewModel = new MainViewModel();
+            ViewModel.Vue = this;
         }
 
-        public void Start()
+        public void JobExecutionError(BackUpJob job)
         {
-            bool exit = false;
-            while (!exit)
-            {
-                // On affiche le menu selon la langue choisie dans le VM
-                ShowMenu();
+            Console.WriteLine(ViewModel.CurrentLanguage == "fr"
+                        ? $"[ERREUR] Le dossier source n'existe pas : {job.SourceDir}"
+                        : $"[ERROR] Source directory not found: {job.SourceDir}");
+        }
 
-                string choice = Console.ReadLine();
-                switch (choice)
-                {
-                    case "1":
-                        // Appelle une méthode pour saisir les infos du Job
-                        CreateJobUI();
-                        break;
-                    case "2":
-                        // Appelle une méthode pour choisir quel Job lancer
-                        ExecuteJobUI();
-                        break;
-                    case "3":
-                        _viewModel.SwitchLanguage();
-                        Console.WriteLine(_viewModel.CurrentLanguage == "fr" ? "Langue changée !" : "Language changed!");
-                        break;
-                    case "q":
-                        exit = true;
-                        break;
-                }
+        public void JobExecutionError(BackUpJob job, Exception ex)
+        {
+            // Tes messages d'erreurs personnalisés sont conservés ici
+            if (ViewModel.CurrentLanguage == "fr")
+            {
+                Console.WriteLine($"[ERREUR] Impossible d'exécuter {job.Name} Le chemin n'est pas valide ou vous tentez d'écrire dans une zone protégée");
+                Console.WriteLine($"Détails techniques : {ex.Message}");
+            }
+            else
+            {
+                Console.WriteLine($"[ERROR] Could not execute {job.Name} Invalid path or attempt to write in a protected area.");
+                Console.WriteLine($"Technical details : {ex.Message}");
             }
         }
+
+        public void JobSucceeded(BackUpJob job)
+        {
+            Console.WriteLine(ViewModel.CurrentLanguage == "fr"
+                     ? $"Succès : {job.Name} terminé."
+                     : $"Success: {job.Name} finished.");
+
+        }
+
+        public void MaximumJobLimitReached()
+        {
+            Console.WriteLine(ViewModel.CurrentLanguage == "fr"
+                   ? "[ERREUR] Limite de 5 travaux atteinte."
+                   : "[ERROR] Limit of 5 jobs reached.");
+        }
+
         private void CreateJobUI()
         {
-            bool isFr = (_viewModel.CurrentLanguage == "fr");
+            bool isFr = (ViewModel.CurrentLanguage == "fr");
             Console.WriteLine(isFr ? "\n--- Création d'un travail ---" : "\n--- Create a Backup Job ---");
 
             // 1. NOM
@@ -100,12 +110,13 @@ namespace EasySave.View
             string type = Console.ReadLine();
 
             // 5. ENVOI AU VIEWMODEL
-            _viewModel.AddJob(name, source, target, type);
+            ViewModel.AddJob(name, source, target, type);
             Console.WriteLine(isFr ? "Travail ajouté avec succès !" : "Job added successfully!");
         }
+
         private void ExecuteJobUI()
         {
-            if (_viewModel.CurrentLanguage == "fr")
+            if (ViewModel.CurrentLanguage == "fr")
             {
                 Console.Write("Entrez le numéro du travail à lancer (0 à 4) : ");
             }
@@ -118,12 +129,12 @@ namespace EasySave.View
             if (int.TryParse(input, out int index))
             {
                 // On vérifie si l'index est valide (0-4) et si le job existe
-                if (index >= 0 && index < _viewModel.Jobs.Count)
+                if (index >= 0 && index < ViewModel.Jobs.Count)
                 {
                     // C'EST ICI QUE LA VIEW APPELLE LE VIEWMODEL
-                    _viewModel.ExecuteJob(index);
+                    ViewModel.ExecuteJob(index);
 
-                    Console.WriteLine(_viewModel.CurrentLanguage == "fr" ? "Exécution terminée." : "Execution finished.");
+                    Console.WriteLine(ViewModel.CurrentLanguage == "fr" ? "Exécution terminée." : "Execution finished.");
                 }
                 else
                 {
@@ -131,19 +142,20 @@ namespace EasySave.View
                 }
             }
         }
+
         private void ShowJobsList()
         {
-            Console.WriteLine(_viewModel.CurrentLanguage == "fr" ? "\n--- Liste des Travaux ---" : "\n--- Jobs List ---");
+            Console.WriteLine(ViewModel.CurrentLanguage == "fr" ? "\n--- Liste des Travaux ---" : "\n--- Jobs List ---");
 
-            if (_viewModel.Jobs.Count == 0)
+            if (ViewModel.Jobs.Count == 0)
             {
-                Console.WriteLine(_viewModel.CurrentLanguage == "fr" ? "Aucun travail configuré." : "No jobs configured.");
+                Console.WriteLine(ViewModel.CurrentLanguage == "fr" ? "Aucun travail configuré." : "No jobs configured.");
                 return;
             }
 
-            for (int i = 0; i < _viewModel.Jobs.Count; i++)
+            for (int i = 0; i < ViewModel.Jobs.Count; i++)
             {
-                var job = _viewModel.Jobs[i];
+                var job = ViewModel.Jobs[i];
                 // On affiche l'index, le nom et l'état
                 Console.WriteLine($"[{i}] Nom: {job.Name} | Source: {job.SourceDir}");
             }
@@ -153,7 +165,7 @@ namespace EasySave.View
         {
             // On affiche la liste des travaux en haut du menu
             ShowJobsList();
-            if (_viewModel.CurrentLanguage == "fr")
+            if (ViewModel.CurrentLanguage == "fr")
             {
                 Console.WriteLine("\n--- Menu EasySave ---");
                 Console.WriteLine("1. Créer un travail de sauvegarde");
@@ -169,6 +181,42 @@ namespace EasySave.View
                 Console.WriteLine("3. Switch language");
                 Console.WriteLine("q. Quit");
             }
+        }
+
+        public void AfficheMenuPrincipal()
+        {
+            /*
+           Menu m = ...;
+           m.add("option A", ()=> { });
+           m.choisis();
+           */
+            bool exit = false;
+            while (!exit)
+            {
+                // On affiche le menu selon la langue choisie dans le VM
+                ShowMenu();
+
+                string choice = Console.ReadLine();
+                switch (choice)
+                {
+                    case "1":
+                        // Appelle une méthode pour saisir les infos du Job
+                        CreateJobUI();
+                        break;
+                    case "2":
+                        // Appelle une méthode pour choisir quel Job lancer
+                        ExecuteJobUI();
+                        break;
+                    case "3":
+                        ViewModel.SwitchLanguage();
+                        Console.WriteLine(ViewModel.CurrentLanguage == "fr" ? "Langue changée !" : "Language changed!");
+                        break;
+                    case "q":
+                        exit = true;
+                        break;
+                }
+            }
+
         }
     }
 }
