@@ -9,7 +9,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\EasyLibrary\EasyLibrary.csproj" />
+    <ProjectReference Include="..\EasyLibrary\EasyLibrary.csproj">
+      <ReferenceSourceTarget></ReferenceSourceTarget>
+    </ProjectReference>
   </ItemGroup>
 
 </Project>
