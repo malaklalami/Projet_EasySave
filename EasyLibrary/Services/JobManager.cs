@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
+
 namespace EasyLibrary.Services
 {
     public class JobManager
@@ -17,9 +18,21 @@ namespace EasyLibrary.Services
             return JsonSerializer.Deserialize<List<BackUpJob>>(json) ?? new List<BackUpJob>();
         }
 
-        public void saveJobs(List<BackUpJob> jobs)
+        public void saveJobs(List<BackUpJob> Jobs)
         {
-            //TODO implémenter la sauvegarde dans un fichier json
+            try
+            {
+
+                var options = new JsonSerializerOptions { WriteIndented = true };
+                string json = JsonSerializer.Serialize(Jobs, options);
+
+                // On écrit le fichier (il sera créé s'il n'existe pas)
+                File.WriteAllText("jobs.json", json);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Erreur lors de la sauvegarde : " + ex.Message);
+            }
         }
     }
 }
