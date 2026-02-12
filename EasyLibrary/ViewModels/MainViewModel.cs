@@ -16,6 +16,23 @@ namespace EasySave.ViewModel
         // Liste qui contient nos travaux de sauvegarde (max 5)
         public List<BackUpJob> Jobs { get; set; }
 
+        // Déclarer le service de configuration
+        private SettingsJsonService _settingsService = new SettingsJsonService();
+
+        // Déclarer l'objet qui contiendra les réglages (pour éviter l'erreur dans Start)
+        public ConsoleSettingsJson CurrentSettings { get; set; }
+
+        // On définit le chemin de base (Universel)
+        private static string BasePath = AppDomain.CurrentDomain.BaseDirectory;
+
+        // 2. On détermine le nom du fichier selon l'OS (Mac/Linux vs Windows)
+        private static string CryptoFileName = OperatingSystem.IsWindows() ? "CryptoSoft.exe" : "CryptoSoft";
+
+        // 3. On initialise le CryptoService avec le bon nom de fichier
+        private CryptoService _cryptoService = new CryptoService(
+            Path.Combine(BasePath, CryptoFileName),
+            "MA_CLE_XOR_123");
+
         // Attribut pour stocker la langue (fr par défaut)
         public string CurrentLanguage { get; set; } = "fr";
 
@@ -35,6 +52,10 @@ namespace EasySave.ViewModel
 
         public void Start()
         {
+            // CHARGEMENT DE LA CONFIG (Langue + Extensions)
+            // C'est ici qu'on appelle  SettingsJsonService
+            CurrentSettings = _settingsService.Load();
+            LoggerService.LogFormat = CurrentSettings.LogFormat;
             Jobs = jobManager.loadJobs("jobs.json");
             Vue.AfficheMenuPrincipal();
         }
@@ -42,35 +63,60 @@ namespace EasySave.ViewModel
         // Méthode pour changer la langue
         public void SwitchLanguage()
         {
-            CurrentLanguage = (CurrentLanguage == "fr") ? "en" : "fr";
-            //TODO écrire la config dans un fichier json pour la persistance
+            // On utilise CurrentSettings au lieu de CurrentLanguage
+            CurrentSettings.Language = (CurrentSettings.Language == "fr") ? "en" : "fr";
+
+            // On sauvegarde le changement dans le JSON !
+            _settingsService.Save(CurrentSettings);
         }
 
         public void SwitchLogFormat()
-        {
-            if (CurrentLogFormat == "json")
+        {   // On change la valeur dans le ettings.json
+            if (CurrentSettings.LogFormat == "json")
             {
-                CurrentLogFormat = "xml";
+                CurrentSettings.LogFormat = "xml";
             }
             else
             {
-                CurrentLogFormat = "json";
+                CurrentSettings.LogFormat = "json";
             }
+            // On met à jour le settings.json pour qu'il change de format immédiatement
+            LoggerService.LogFormat = CurrentSettings.LogFormat;
+
+            // On sauvegarde le tout dans le fichier settings.json
+            _settingsService.Save(CurrentSettings);
         }
 
+        public void AddEncryptionExtension(string extension)
+        {
+            if (string.IsNullOrWhiteSpace(extension)) return;
+
+            // Nettoyage de l'entrée
+            string cleanExt = extension.Trim().ToLower();
+            if (!cleanExt.StartsWith(".")) cleanExt = "." + cleanExt;
+
+            // Mise à jour du Modèle
+            if (!CurrentSettings.EncryptionExtensions.Contains(cleanExt))
+            {
+                CurrentSettings.EncryptionExtensions.Add(cleanExt);
+
+                // Persistance via le Service
+                _settingsService.Save(CurrentSettings);
+            }
+        }
         // Méthode pour ajouter un travail (View -> ViewModel)
         public void AddJob(string name, string source, string target, string type)
         {
-            // Correction de la limite : < 5 pour ne pas dépasser 5 slots
-            if (Jobs.Count < 5)
-            {
+
+            //if (Jobs.Count < 5)
+            //{
                 Jobs.Add(new BackUpJob(name, source, target, type));
                 jobManager.saveJobs(Jobs); // Sauvegarde après ajout
-            }
-            else
-            {
-                Vue.MaximumJobLimitReached();
-            }
+            //}
+            //else
+            //{
+            //    Vue.MaximumJobLimitReached();
+            //}
         }
 
         public void ClearAllJobs()
@@ -137,6 +183,19 @@ namespace EasySave.ViewModel
                     stopwatch.Restart(); // On lance le chrono pour ce fichier
                     // Copie physique du fichier
                     File.Copy(files[i], destFile, true);
+
+                    Console.WriteLine("Vérification pour : " + destFile);
+
+                    if (_cryptoService.ShouldEncrypt(destFile, CurrentSettings.EncryptionExtensions))
+                    {
+                        Console.WriteLine("LANCEMENT DU CHIFFREMENT...");
+                        _cryptoService.Encrypt(destFile);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Chiffrement ignoré (Extension non trouvée)");
+                    }
+
                     stopwatch.Stop(); // On arrête le chrono
 
                     // APPEL DE LA DLL LOGS
