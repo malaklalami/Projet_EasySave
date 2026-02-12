@@ -3,7 +3,7 @@ using System;
 
 public interface IVue
 {
-    void MaximumJobLimitReached();
+    //void MaximumJobLimitReached();
 
     void JobExecutionError(BackUpJob job);
     void JobExecutionError(BackUpJob job, Exception ex);
