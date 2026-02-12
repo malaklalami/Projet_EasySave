@@ -35,7 +35,7 @@ namespace EasySave.ViewModel
 
         public void Start()
         {
-            Jobs = jobManager.loadJobs();
+            Jobs = jobManager.loadJobs("jobs.json");
             Vue.AfficheMenuPrincipal();
         }
 
