@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EasyConsole", "EasyConsole\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EasyAvalonia", "EasyAvalonia\EasyAvalonia.csproj", "{A26582C5-E35A-4DBE-A3FB-EF47650AF3A1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoSoft", "CryptoSoft\CryptoSoft.csproj", "{CF8C3B36-5572-4593-BEC9-3F6B3AAC7CF3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -55,6 +57,18 @@ Global
 		{A26582C5-E35A-4DBE-A3FB-EF47650AF3A1}.Release|x64.Build.0 = Release|Any CPU
 		{A26582C5-E35A-4DBE-A3FB-EF47650AF3A1}.Release|x86.ActiveCfg = Release|Any CPU
 		{A26582C5-E35A-4DBE-A3FB-EF47650AF3A1}.Release|x86.Build.0 = Release|Any CPU
+		{CF8C3B36-5572-4593-BEC9-3F6B3AAC7CF3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CF8C3B36-5572-4593-BEC9-3F6B3AAC7CF3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CF8C3B36-5572-4593-BEC9-3F6B3AAC7CF3}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{CF8C3B36-5572-4593-BEC9-3F6B3AAC7CF3}.Debug|x64.Build.0 = Debug|Any CPU
+		{CF8C3B36-5572-4593-BEC9-3F6B3AAC7CF3}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{CF8C3B36-5572-4593-BEC9-3F6B3AAC7CF3}.Debug|x86.Build.0 = Debug|Any CPU
+		{CF8C3B36-5572-4593-BEC9-3F6B3AAC7CF3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CF8C3B36-5572-4593-BEC9-3F6B3AAC7CF3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CF8C3B36-5572-4593-BEC9-3F6B3AAC7CF3}.Release|x64.ActiveCfg = Release|Any CPU
+		{CF8C3B36-5572-4593-BEC9-3F6B3AAC7CF3}.Release|x64.Build.0 = Release|Any CPU
+		{CF8C3B36-5572-4593-BEC9-3F6B3AAC7CF3}.Release|x86.ActiveCfg = Release|Any CPU
+		{CF8C3B36-5572-4593-BEC9-3F6B3AAC7CF3}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
