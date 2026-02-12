@@ -34,5 +34,13 @@ namespace EasyLibrary.Services
                 Console.WriteLine("Erreur lors de la sauvegarde : " + ex.Message);
             }
         }
+
+        public void clearJobs()
+        {
+            if (File.Exists("jobs.json"))
+            {
+                File.Delete("jobs.json");
+            }
+        }
     }
 }

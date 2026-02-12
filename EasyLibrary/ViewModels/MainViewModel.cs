@@ -73,6 +73,18 @@ namespace EasySave.ViewModel
             }
         }
 
+        public void ClearAllJobs()
+        {
+            // On vide la liste en mémoire (l'affichage se videra)
+            if (Jobs != null)
+            {
+                Jobs.Clear();
+            }
+
+            // On demande au manager de supprimer le fichier JSON
+            jobManager.clearJobs();
+        }
+
         public void ExecuteJob(int index)
         {
             // 1. On récupère le travail concerné
@@ -160,5 +172,6 @@ namespace EasySave.ViewModel
                 _stateService.UpdateState(job);
             }
         }
+
     }
 }

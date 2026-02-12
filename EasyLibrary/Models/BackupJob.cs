@@ -1,4 +1,5 @@
 ﻿using System;
+
 namespace EasyLibrary.Models
 {
     public class BackUpJob
@@ -13,6 +14,11 @@ namespace EasyLibrary.Models
         public int TotalFiles { get; set; }
         public long TotalSize { get; set; }
         public int Progress { get; set; }
+
+        // Pour le json qui charge les jobs
+        public BackUpJob()
+        {
+        }
 
         public BackUpJob(string name, string source, string target, string type)
         {

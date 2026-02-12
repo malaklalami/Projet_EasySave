@@ -172,6 +172,7 @@ namespace EasySave.View
                 Console.WriteLine("2. Lancer une sauvegarde");
                 Console.WriteLine("3. Changer la langue");
                 Console.WriteLine("4. Changer le format des logs (Actuel : " + ViewModel.CurrentLogFormat + ")");
+                Console.WriteLine("5. Effacer tous les travaux");
                 Console.WriteLine("q. Quitter");
             }
             else
@@ -181,6 +182,7 @@ namespace EasySave.View
                 Console.WriteLine("2. Run a backup");
                 Console.WriteLine("3. Switch language");
                 Console.WriteLine("4. Change log format (Current : " + ViewModel.CurrentLogFormat + ")");
+                Console.WriteLine("5. Clear all jobs");
                 Console.WriteLine("q. Quit");
             }
         }
@@ -218,6 +220,10 @@ namespace EasySave.View
                         Console.WriteLine(ViewModel.CurrentLanguage == "fr"
                             ? "Format des logs changé : " + ViewModel.CurrentLogFormat
                             : "Log format changed : " + ViewModel.CurrentLogFormat);
+                        break;
+                    case "5":
+                        ViewModel.ClearAllJobs();
+                        Console.WriteLine(ViewModel.CurrentLanguage == "fr" ? ">>>> Tous les travaux ont été supprimés." : ">>>> All jobs have been deleted.");
                         break;
                     case "q":
                         exit = true;
