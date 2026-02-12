@@ -22,6 +22,13 @@ namespace EasySave.ViewModel
         // Instance du Logger de la DLL
         private LoggerService LoggerService = new LoggerService();
 
+        // Pour lire ou changer le format des logs (v1.1)
+        public string CurrentLogFormat
+        {
+            get => LoggerService.LogFormat;
+            set => LoggerService.LogFormat = value;
+        }
+
         // Instance pour gérer l'état en temps réel
         private StateService _stateService = new StateService();
         private JobManager jobManager = new JobManager();
@@ -37,6 +44,18 @@ namespace EasySave.ViewModel
         {
             CurrentLanguage = (CurrentLanguage == "fr") ? "en" : "fr";
             //TODO écrire la config dans un fichier json pour la persistance
+        }
+
+        public void SwitchLogFormat()
+        {
+            if (CurrentLogFormat == "json")
+            {
+                CurrentLogFormat = "xml";
+            }
+            else
+            {
+                CurrentLogFormat = "json";
+            }
         }
 
         // Méthode pour ajouter un travail (View -> ViewModel)
