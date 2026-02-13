@@ -11,4 +11,5 @@ public class LogEntry
     public string TargetPath { get; set; }     // Où il va
     public long FileSize { get; set; }         // Taille en octets
     public double TransferTimeMs { get; set; }  // Temps de copie (-1 si erreur)
+    public long EncryptionTimeMs { get; set; } //Temps de chiffrement (0 si pas chiffré, -1 si erreur)
 }
