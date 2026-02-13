@@ -24,12 +24,15 @@ public class CryptoService
         return allowedExtensions.Contains(extension);
     }
 
-    public int? Encrypt(string file)
+    public long Encrypt(string file)
     {
         if (!OperatingSystem.IsWindows())
         {
             Process.Start("chmod", $"+x \"{_path}\"").WaitForExit();
         }
+
+        Stopwatch sw = Stopwatch.StartNew();
+        
         try
         {
             var startInfo = new ProcessStartInfo
@@ -43,13 +46,16 @@ public class CryptoService
             using (var process = Process.Start(startInfo))
             {
                 process.WaitForExit();
-                return process.ExitCode;
+                sw.Stop();// arrêt du chrono
+                         
+                if (process.ExitCode != 0) return -1;   // Si CryptoSoft renvoie une erreur (différent de 0), on retourne -1
+                return sw.ElapsedMilliseconds; // Succès : on retourne le temps (>0)
             }
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"Erreur lors de l'appel CryptoSoft : {ex.Message}");
-            return null; // Si ça rate, on renvoie "rien" au lieu d'un chiffre moche
+            return -2; // Erreur système : on retourne -2 (<0)
         }
     }
 }
