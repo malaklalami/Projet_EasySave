@@ -1,7 +1,7 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Interactivity;
 using System;
-
+using EasySave.ViewModel;
 namespace EasyAvalonia;
 
 public partial class MainWindow : Window
