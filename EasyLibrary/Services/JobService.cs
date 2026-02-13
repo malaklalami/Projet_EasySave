@@ -6,6 +6,7 @@ using EasyLibrary.Models;
 
 
 namespace EasyLibrary.Services
+// Le JobService est responsable de toute la logique métier liée à l'exécution des sauvegardes, à la gestion des jobs et à l'interaction avec les autres services.
 {
     public class JobService
     {
@@ -15,7 +16,7 @@ namespace EasyLibrary.Services
         private readonly SettingsJsonService _settingsService;
         private readonly JobManager _jobManager;
         private readonly BusinessSoftwareService _businessService = new BusinessSoftwareService();
-
+        // Le constructeur reçoit toutes les dépendances nécessaires pour fonctionner
         public JobService(StateService stateService, LoggerService loggerService, CryptoService cryptoService, SettingsJsonService settingsService, JobManager jobManager)
         {
             _stateService = stateService;
@@ -55,6 +56,7 @@ namespace EasyLibrary.Services
 
                 for (int i = 0; i < files.Length; i++)
                 {
+                   
                     if (_businessService.IsRunning(businessSoftwareName))
                     {
                         Console.WriteLine($"\n[INTERRUPTION] {businessSoftwareName} détecté. Arrêt après le fichier actuel.");
@@ -74,26 +76,38 @@ namespace EasyLibrary.Services
                     string relativePath = Path.GetRelativePath(job.SourceDir, files[i]);
                     string destFile = Path.Combine(job.TargetDir, relativePath);
                     string destFolder = Path.GetDirectoryName(destFile);
+
                     if (!Directory.Exists(destFolder)) Directory.CreateDirectory(destFolder);
 
                     FileInfo fileInfo = new FileInfo(files[i]);
                     stopwatch.Restart();
+
+                    // 1. COPIE DU FICHIER
                     File.Copy(files[i], destFile, true);
 
+                    // 2. CRYPTAGE ET CALCUL DU TEMPS (La consigne : 0, >0 ou <0)
+                    long encryptionTime = 0; // Par défaut 0 (si pas de cryptage)
+
                     if (_cryptoService.ShouldEncrypt(destFile, encryptionExtensions))
-                        _cryptoService.Encrypt(destFile);
+                    {
+                        // On appelle CryptoSoft et on récupère le temps (ou l'erreur)
+                        encryptionTime = _cryptoService.Encrypt(destFile);
+                    }
 
                     stopwatch.Stop();
 
+                    // 3. ECRITURE DU LOG AVEC LA NOUVELLE INFO
                     _loggerService.WriteLog(new LogEntry
                     {
                         JobName = job.Name,
                         SourcePath = files[i],
                         TargetPath = destFile,
                         FileSize = fileInfo.Length,
-                        TransferTimeMs = stopwatch.Elapsed.TotalMilliseconds
+                        TransferTimeMs = stopwatch.Elapsed.TotalMilliseconds,
+                        EncryptionTimeMs = encryptionTime // <--- L'évolution demandée est ici
                     });
 
+                    // 4. MISE A JOUR DE LA PROGRESSION
                     job.Progress = (int)((i + 1) * 100 / files.Length);
                     _stateService.UpdateState(job);
                 }
@@ -119,7 +133,7 @@ namespace EasyLibrary.Services
             jobs.Add(new BackUpJob(name, source, target, type));
             _jobManager.saveJobs(jobs);
         }
-
+        // ----------------------------------------------UPDATEJOB-----------------------------------------
         public void UpdateJob(List<BackUpJob> jobs, int index, string name, string source, string target, string type)
         {
             if (index >= 0 && index < jobs.Count)
@@ -134,13 +148,13 @@ namespace EasyLibrary.Services
                 _jobManager.saveJobs(jobs);
             }
         }
-        
+        // ----------------------------------------------CLEARJOBS-----------------------------------------
         public void ClearJobs(List<BackUpJob> jobs)
         {
             jobs?.Clear();
             _jobManager.clearJobs();
         }
-
+        // ----------------------------------------------REMOVEJOB-----------------------------------------
         public void RemoveJob(List<BackUpJob> jobs, int index)
         {
             if (index >= 0 && index < jobs.Count)
@@ -150,20 +164,20 @@ namespace EasyLibrary.Services
             }
         }
 
-        
+        // ----------------------------------------------SWITCHLANGUAGE--------------------------------------
         public void SwitchLanguage(ConsoleSettingsJson settings)
         {
             settings.Language = (settings.Language == "fr") ? "en" : "fr";
             _settingsService.Save(settings);
         }
-
+        //------------------------------SWITCHLOGFORMAT--------------------------------------
         public void SwitchLogFormat(ConsoleSettingsJson settings)
         {
             settings.LogFormat = (settings.LogFormat == "json") ? "xml" : "json";
             _loggerService.LogFormat = settings.LogFormat;
             _settingsService.Save(settings);
         }
-
+        //-----------------------------------------------ADDEXTENSION----------
         public void AddExtension(ConsoleSettingsJson settings, string extension)
         {
             if (string.IsNullOrWhiteSpace(extension)) return;
