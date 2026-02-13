@@ -1,9 +1,56 @@
-<Window xmlns="https://github.com/avaloniaui"
+﻿<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="EasyAvalonia.MainWindow"
-        Title="EasyAvalonia">
-    Welcome to Avalonia!
+        Title="EasySave v1.0 - Gestionnaire de Sauvegarde"
+        Width="900" Height="600"
+        WindowStartupLocation="CenterScreen">
+
+    <Grid RowDefinitions="Auto, *, Auto" Margin="20">
+        
+        <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Stretch" Margin="0,0,0,20">
+            <TextBlock Text="🛡️ EasySave" FontSize="28" FontWeight="ExtraBold" VerticalAlignment="Center"/>
+            <Separator Width="20" Background="Transparent"/>
+            <Button Content="Changer Langue" Click="OnLanguageClick" Background="#444" Foreground="White"/>
+        </StackPanel>
+
+        <Border Grid.Row="1" Background="#1e1e1e" CornerRadius="10" Padding="15">
+            <ScrollViewer>
+                <StackPanel Name="JobsContainer">
+                    
+                    <Border Background="#2d2d2d" Margin="0,5" Padding="15" CornerRadius="8">
+                        <Grid ColumnDefinitions="*, 2*, Auto">
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Sauvegarde_Photos" FontWeight="Bold" FontSize="16" Foreground="#3498db"/>
+                                <TextBlock Text="Statut: En attente" FontSize="12" Foreground="Gray"/>
+                            </StackPanel>
+                            
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="Source: C:\Users\Images" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Text="Cible: D:\Backups\Photos" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10">
+                                <Button Content="▶ Lancer" Background="#27ae60" Click="OnBackupClick"/>
+                                <Button Content="⚙️" Background="#f39c12"/>
+                                <Button Content="🗑️" Background="#e74c3c"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                    
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <Grid Grid.Row="2" ColumnDefinitions="*, Auto" Margin="0,20,0,0">
+            <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,20,0">
+                <TextBlock Text="Progression globale : 0%" FontSize="12" Margin="0,0,0,5"/>
+                <ProgressBar Height="10" Value="0" Maximum="100" Foreground="#3498db"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                <Button Content="+ Nouveau Travail" Padding="15,10" Background="#3498db" FontWeight="Bold"/>
+                <Button Content="Lancer tout" Padding="15,10" Background="#2ecc71" FontWeight="Bold"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
 </Window>

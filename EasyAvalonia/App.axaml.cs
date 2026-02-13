@@ -4,7 +4,7 @@ using Avalonia.Markup.Xaml;
 
 namespace EasyAvalonia;
 
-public partial class App : Application
+public partial class App : Avalonia.Application
 {
     public override void Initialize()
     {
@@ -16,6 +16,7 @@ public partial class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.MainWindow = new MainWindow();
+            //DataContext = new MainViewModel()   is not needed because of the use of the ViewModelLocator in the XAML file, which automatically resolves the MainViewModel for the MainWindow.
         }
 
         base.OnFrameworkInitializationCompleted();
