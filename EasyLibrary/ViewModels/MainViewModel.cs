@@ -4,7 +4,7 @@ using System.IO;
 using EasyLibrary.Models;
 using EasyLibrary.Services;
 
-namespace EasySave.ViewModel
+namespace EasyLibrary.ViewModels
 {
     public class MainViewModel
     {
@@ -12,15 +12,18 @@ namespace EasySave.ViewModel
         public List<BackUpJob> Jobs { get; set; }
         public ConsoleSettingsJson CurrentSettings { get; set; }
 
+
         private readonly JobService _jobService;
         private readonly SettingsJsonService _settingsService = new SettingsJsonService();
         private readonly JobManager _jobManager = new JobManager();
+
+        private BusinessSoftwareService _businessService = new BusinessSoftwareService();
 
         public MainViewModel()
         {
             // Initialisation des dépendances
             var stateService = new StateService();
-            var loggerService = new EasyLog.LoggerService();
+            var loggerService = new LoggerService();
             string basePath = AppDomain.CurrentDomain.BaseDirectory;
             string cryptoFileName = OperatingSystem.IsWindows() ? "CryptoSoft.exe" : "CryptoSoft";
             var cryptoService = new CryptoService(Path.Combine(basePath, cryptoFileName), "MA_CLE_XOR_123");
@@ -29,24 +32,44 @@ namespace EasySave.ViewModel
             _jobService = new JobService(stateService, loggerService, cryptoService, _settingsService, _jobManager);
         }
 
-        public void Start()
+        public void LoadData()
         {
             CurrentSettings = _settingsService.Load();
             Jobs = _jobManager.loadJobs("jobs.json");
-            Vue?.AfficheMenuPrincipal();
+
+        }
+
+        public void Start()
+        {
+            LoadData(); // On charge les données
+            Vue?.AfficheMenuPrincipal(); // On affiche le menu
         }
 
         // Appels directs au service
-        public void ExecuteJob(int index) => _jobService.ExecuteJob(Jobs[index], CurrentSettings.EncryptionExtensions, Vue);
+        public void ExecuteJob(int index) => _jobService.ExecuteJob(Jobs[index], CurrentSettings.EncryptionExtensions, Vue, CurrentSettings.BusinessSoftware);
 
         public void AddJob(string n, string s, string t, string ty) => _jobService.AddJob(Jobs, n, s, t, ty);
 
+        public void EditJob(int index, string name, string source, string target, string type)
+        {
+            _jobService.UpdateJob(Jobs, index, name, source, target, type);
+        }
+
         public void ClearAllJobs() => _jobService.ClearJobs(Jobs);
+
+        public void DeleteJob(int index) => _jobService.RemoveJob(Jobs, index);
 
         public void SwitchLanguage() => _jobService.SwitchLanguage(CurrentSettings);
 
         public void SwitchLogFormat() => _jobService.SwitchLogFormat(CurrentSettings);
 
         public void AddEncryptionExtension(string ext) => _jobService.AddExtension(CurrentSettings, ext);
+
+        public void SetBusinessSoftware(string name) => _businessService.UpdateBusinessSoftware(CurrentSettings, name);
+
+        public void ExecuteJobsFromArgs(string input)
+        {
+            _jobService.ExecuteFromCommandLine(input, Jobs, CurrentSettings, Vue);
+        }
     }
 }
