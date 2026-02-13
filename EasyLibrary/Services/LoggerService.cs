@@ -3,7 +3,7 @@ using System.IO;
 using EasyLibrary.Models;
 using System.Xml.Serialization;
 
-namespace EasyLog;
+namespace EasyLibrary.Services;
 
 public class LoggerService
 
