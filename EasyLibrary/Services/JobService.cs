@@ -34,7 +34,14 @@ namespace EasyLibrary.Services
                 if (_businessService.IsRunning(businessSoftwareName))
                 {
                     Console.WriteLine($"\n[AVERTISSEMENT] Logiciel métier '{businessSoftwareName}' détecté. Sauvegarde annulée.");
-                    // Optionnel : tu peux logger l'arrêt ici aussi
+                    _loggerService.WriteLog(new LogEntry
+                    {
+                        JobName = job.Name,
+                        SourcePath = "INTERRUPTION_LOGICIEL_METIER",
+                        TargetPath = businessSoftwareName,
+                        FileSize = 0,
+                        TransferTimeMs = -1 // On met -1 pour indiquer une erreur/arrêt dans le log
+                    });
                     return;
                 }
                 if (!Directory.Exists(job.SourceDir)) { vue?.JobExecutionError(job); return; }
@@ -52,7 +59,7 @@ namespace EasyLibrary.Services
                     {
                         Console.WriteLine($"\n[INTERRUPTION] {businessSoftwareName} détecté. Arrêt après le fichier actuel.");
                         // On consigne l'arrêt dans les logs avant de quitter
-                        // ON CONSIGNE L'ARRÊT DANS LE LOG (Consigne respectée)
+                      
                         _loggerService.WriteLog(new LogEntry
                         {
                             JobName = job.Name,
@@ -105,6 +112,8 @@ namespace EasyLibrary.Services
         }
 
         
+
+        //----------------------------------------------ADDJOB--------------------------------------------
         public void AddJob(List<BackUpJob> jobs, string name, string source, string target, string type)
         {
             jobs.Add(new BackUpJob(name, source, target, type));
@@ -125,7 +134,7 @@ namespace EasyLibrary.Services
                 _jobManager.saveJobs(jobs);
             }
         }
-
+        
         public void ClearJobs(List<BackUpJob> jobs)
         {
             jobs?.Clear();
