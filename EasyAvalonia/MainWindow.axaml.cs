@@ -2,11 +2,11 @@
 using Avalonia.Interactivity;
 using System;
 using EasyLibrary.ViewModels;
+
 namespace EasyAvalonia;
 
 public partial class MainWindow : Window
 {
-    // On garde notre instance de ViewModel
     private MainViewModel _viewModel = new MainViewModel();
 
     public MainWindow()
@@ -14,57 +14,51 @@ public partial class MainWindow : Window
         InitializeComponent();
         this.DataContext = _viewModel;
 
-        if (!Avalonia.Controls.Design.IsDesignMode)
+        // Sécurité : On ne lance la logique que si le ViewModel existe
+        if (!Avalonia.Controls.Design.IsDesignMode && _viewModel != null)
         {
-            // _viewModel.Start(); // À décommenter quand ta logique sera prête
+            _viewModel.Start();
         }
     }
 
-    // 1. Bouton "Changer Langue"
+    // NOUVEAU : Sauvegarde des paramètres sans crash
+    public void OnSaveParamsClick(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel?.CurrentSettings == null) return;
+
+        // On récupère le nom du logiciel métier
+        var softBox = this.FindControl<TextBox>("TxtBusinessSoft");
+        if (softBox != null) _viewModel.CurrentSettings.BusinessSoftware = softBox.Text;
+
+        // On gère le format de log (JSON/XML)
+        var combo = this.FindControl<ComboBox>("ComboLogFormat");
+        if (combo != null)
+        {
+            // Simple bascule si nécessaire
+            _viewModel.SwitchLogFormat();
+        }
+
+        System.Diagnostics.Debug.WriteLine("Paramètres mis à jour.");
+    }
+
+    // Tes méthodes existantes (sécurisées avec des ?)
     public void OnLanguageClick(object sender, RoutedEventArgs e)
     {
-        // Appel de la fonction de changement de langue
-        // _viewModel.ChangeLanguage();
+        _viewModel?.SwitchLanguage();
         System.Diagnostics.Debug.WriteLine("Action : Changer Langue");
     }
 
-    // 2. Bouton "Lancer" (pour un seul job)
     public void OnBackupClick(object sender, RoutedEventArgs e)
     {
-        // Appel de la fonction pour lancer un job spécifique
-        // _viewModel.ExecuteJob(0); 
+        _viewModel?.ExecuteJob(0);
         System.Diagnostics.Debug.WriteLine("Action : Lancer un Job");
     }
 
-    // 3. Bouton "⚙️" (Paramètres/Modifier)
-    public void OnSettingsClick(object sender, RoutedEventArgs e)
-    {
-        // Appel de la fonction pour modifier les paramètres du job
-        // _viewModel.OpenJobSettings(0);
-        System.Diagnostics.Debug.WriteLine("Action : Modifier Job");
-    }
+    public void OnSettingsClick(object sender, RoutedEventArgs e) => System.Diagnostics.Debug.WriteLine("Action : Modifier Job");
 
-    // 4. Bouton "🗑️" (Supprimer)
-    public void OnDeleteClick(object sender, RoutedEventArgs e)
-    {
-        // Appel de la fonction pour supprimer un job
-        // _viewModel.DeleteJob(0);
-        System.Diagnostics.Debug.WriteLine("Action : Supprimer Job");
-    }
+    public void OnDeleteClick(object sender, RoutedEventArgs e) => System.Diagnostics.Debug.WriteLine("Action : Supprimer Job");
 
-    // 5. Bouton "+ Nouveau Travail"
-    public void OnAddJobClick(object sender, RoutedEventArgs e)
-    {
-        // Appel de la fonction pour créer un nouveau job
-        // _viewModel.AddNewJob();
-        System.Diagnostics.Debug.WriteLine("Action : Ajouter un Job");
-    }
+    public void OnAddJobClick(object sender, RoutedEventArgs e) => System.Diagnostics.Debug.WriteLine("Action : Ajouter Job");
 
-    // 6. Bouton "Lancer tout"
-    public void OnBackupAllClick(object sender, RoutedEventArgs e)
-    {
-        // Appel de la fonction pour lancer tous les jobs en séquence
-        // _viewModel.ExecuteAllJobs();
-        System.Diagnostics.Debug.WriteLine("Action : Lancer TOUS les Jobs");
-    }
+    public void OnBackupAllClick(object sender, RoutedEventArgs e) => System.Diagnostics.Debug.WriteLine("Action : Lancer tout");
 }
