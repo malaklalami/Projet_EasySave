@@ -11,32 +11,24 @@ namespace EasyLibrary.Services
     {
         private readonly StateService _stateService;
         private readonly LoggerService _loggerService;
-        private readonly CryptoService _cryptoService;
         private readonly SettingsJsonService _settingsService;
         private readonly JobManager _jobManager;
-        private readonly BusinessSoftwareService _businessService = new BusinessSoftwareService();
 
-        public JobService(StateService stateService, LoggerService loggerService, CryptoService cryptoService, SettingsJsonService settingsService, JobManager jobManager)
+        public JobService(StateService stateService, LoggerService loggerService, SettingsJsonService settingsService, JobManager jobManager)
         {
             _stateService = stateService;
             _loggerService = loggerService;
-            _cryptoService = cryptoService;
+            
             _settingsService = settingsService;
             _jobManager = jobManager;
         }
 
         // --- LOGIQUE D'EXÉCUTION ---
-        public void ExecuteJob(BackUpJob job, List<string> encryptionExtensions, IVue vue, string businessSoftwareName)
+        public void ExecuteJob(BackUpJob job, IVue vue)
         {
             Stopwatch stopwatch = new Stopwatch();
             try
             {
-                if (_businessService.IsRunning(businessSoftwareName))
-                {
-                    Console.WriteLine($"\n[AVERTISSEMENT] Logiciel métier '{businessSoftwareName}' détecté. Sauvegarde annulée.");
-                    // Optionnel : tu peux logger l'arrêt ici aussi
-                    return;
-                }
                 if (!Directory.Exists(job.SourceDir)) { vue?.JobExecutionError(job); return; }
 
                 job.State = "Active";
@@ -48,22 +40,7 @@ namespace EasyLibrary.Services
 
                 for (int i = 0; i < files.Length; i++)
                 {
-                    if (_businessService.IsRunning(businessSoftwareName))
-                    {
-                        Console.WriteLine($"\n[INTERRUPTION] {businessSoftwareName} détecté. Arrêt après le fichier actuel.");
-                        // On consigne l'arrêt dans les logs avant de quitter
-                        // ON CONSIGNE L'ARRÊT DANS LE LOG (Consigne respectée)
-                        _loggerService.WriteLog(new LogEntry
-                        {
-                            JobName = job.Name,
-                            SourcePath = "INTERRUPTION_LOGICIEL_METIER",
-                            TargetPath = businessSoftwareName,
-                            FileSize = 0,
-                            TransferTimeMs = -1 // On met -1 pour indiquer une erreur/arrêt dans le log
-                        });
 
-                        break;
-                    }
                     string relativePath = Path.GetRelativePath(job.SourceDir, files[i]);
                     string destFile = Path.Combine(job.TargetDir, relativePath);
                     string destFolder = Path.GetDirectoryName(destFile);
@@ -73,8 +50,7 @@ namespace EasyLibrary.Services
                     stopwatch.Restart();
                     File.Copy(files[i], destFile, true);
 
-                    if (_cryptoService.ShouldEncrypt(destFile, encryptionExtensions))
-                        _cryptoService.Encrypt(destFile);
+
 
                     stopwatch.Stop();
 
@@ -155,18 +131,7 @@ namespace EasyLibrary.Services
             _settingsService.Save(settings);
         }
 
-        public void AddExtension(ConsoleSettingsJson settings, string extension)
-        {
-            if (string.IsNullOrWhiteSpace(extension)) return;
-            string cleanExt = extension.Trim().ToLower();
-            if (!cleanExt.StartsWith(".")) cleanExt = "." + cleanExt;
 
-            if (!settings.EncryptionExtensions.Contains(cleanExt))
-            {
-                settings.EncryptionExtensions.Add(cleanExt);
-                _settingsService.Save(settings);
-            }
-        }
         
         public void ExecuteFromCommandLine(string input, List<BackUpJob> jobs, ConsoleSettingsJson settings, IVue vue)
         {
@@ -207,7 +172,7 @@ namespace EasyLibrary.Services
                 {
                     Console.WriteLine($"\n[CMD] Lancement du travail {index} : {jobs[index].Name}...");
                     // On appelle l'exécution réelle que tu as déjà codée
-                    ExecuteJob(jobs[index], settings.EncryptionExtensions, vue, settings.BusinessSoftware);
+                    ExecuteJob(jobs[index], vue);
                 }
                 else
                 {

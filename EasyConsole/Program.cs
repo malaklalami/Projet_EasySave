@@ -1,6 +1,6 @@
 ﻿using System;
 using EasyLibrary.ViewModels;
-using EasyConsole; // Adapte selon ton namespace réel de ConsoleView
+
 
 namespace EasyConsole
 {

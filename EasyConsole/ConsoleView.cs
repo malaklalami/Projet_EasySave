@@ -259,8 +259,6 @@ namespace EasyConsole
                 Console.WriteLine("5. Modifier un travail de sauvegarde");
                 Console.WriteLine("6. Supprimer un travail de sauvegarde");
                 Console.WriteLine("7. Effacer tous les travaux");
-                Console.WriteLine("8. Configurer les extensions à chiffrer (Actuel : " +string.Join(", ", ViewModel.CurrentSettings.EncryptionExtensions) + ")");
-                Console.WriteLine("9. Configurer le logiciel métier (Actuel : " + ViewModel.CurrentSettings.BusinessSoftware + ")");
                 Console.WriteLine("q. Quitter");
             }
             else
@@ -273,8 +271,6 @@ namespace EasyConsole
                 Console.WriteLine("5. Edit a backup job");
                 Console.WriteLine("6. Delete one backupjob");
                 Console.WriteLine("7. Clear all jobs");
-                Console.WriteLine("8. Configure encryption extensions (Current : " + string.Join(", ", ViewModel.CurrentSettings.EncryptionExtensions) + ")");
-                Console.WriteLine("9. Configure business software (Current : " + ViewModel.CurrentSettings.BusinessSoftware + ")");
                 Console.WriteLine("q. Quit");
             }
         }
@@ -320,42 +316,6 @@ namespace EasyConsole
                     case "7":
                         ViewModel.ClearAllJobs();
                         Console.WriteLine(ViewModel.CurrentSettings.Language == "fr" ? ">>>> Tous les travaux ont été supprimés." : ">>>> All jobs have been deleted.");
-                        break;
-                    case "8": // Nouvelle option
-                        Console.WriteLine("Entrez l'extension à chiffrer (ex: .txt, .pdf) :");
-                        string ext = Console.ReadLine() ?? "";
-                        ViewModel.AddEncryptionExtension(ext);
-                        Console.WriteLine("Extension ajoutée avec succès !");
-                        break;
-                    case "9":
-                        Console.Clear();
-                        // Gestion de la langue pour l'affichage
-                        if (ViewModel.CurrentSettings.Language == "fr")
-                        {
-                            Console.WriteLine("--- Paramètres du Logiciel Métier ---");
-                            Console.WriteLine($"Logiciel actuellement surveillé : {ViewModel.CurrentSettings.BusinessSoftware}");
-                            Console.WriteLine("Entrez le nouveau nom du processus (ex: Calculator) ou Entrée pour annuler :");
-                        }
-                        else
-                        {
-                            Console.WriteLine("--- Business Software Settings ---");
-                            Console.WriteLine($"Currently monitored: {ViewModel.CurrentSettings.BusinessSoftware}");
-                            Console.WriteLine("Enter new process name (e.g., Calculator) or Enter to cancel:");
-                        }
-
-                        string newBusinessSoft = Console.ReadLine() ?? "";
-
-                        if (!string.IsNullOrWhiteSpace(newBusinessSoft))
-                        {
-                            // On appelle la méthode du ViewModel pour sauvegarder
-                            ViewModel.SetBusinessSoftware(newBusinessSoft);
-
-                            Console.WriteLine(ViewModel.CurrentSettings.Language == "fr"
-                                ? " Mise à jour effectuée !"
-                                : " Update successful!");
-                        }
-                        Console.WriteLine("\nAppuyez sur une touche pour revenir au menu...");
-                        Console.ReadKey();
                         break;
                     case "q":
                         exit = true;

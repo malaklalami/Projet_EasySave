@@ -17,7 +17,7 @@ namespace EasyLibrary.ViewModels
         private readonly SettingsJsonService _settingsService = new SettingsJsonService();
         private readonly JobManager _jobManager = new JobManager();
 
-        private BusinessSoftwareService _businessService = new BusinessSoftwareService();
+
 
         public MainViewModel()
         {
@@ -25,11 +25,10 @@ namespace EasyLibrary.ViewModels
             var stateService = new StateService();
             var loggerService = new LoggerService();
             string basePath = AppDomain.CurrentDomain.BaseDirectory;
-            string cryptoFileName = OperatingSystem.IsWindows() ? "CryptoSoft.exe" : "CryptoSoft";
-            var cryptoService = new CryptoService(Path.Combine(basePath, cryptoFileName), "MA_CLE_XOR_123");
+
 
             // Le JobService reçoit tout ce dont il a besoin pour travailler
-            _jobService = new JobService(stateService, loggerService, cryptoService, _settingsService, _jobManager);
+            _jobService = new JobService(stateService, loggerService, _settingsService, _jobManager);
         }
 
         public void LoadData()
@@ -46,7 +45,7 @@ namespace EasyLibrary.ViewModels
         }
 
         // Appels directs au service
-        public void ExecuteJob(int index) => _jobService.ExecuteJob(Jobs[index], CurrentSettings.EncryptionExtensions, Vue, CurrentSettings.BusinessSoftware);
+        public void ExecuteJob(int index) => _jobService.ExecuteJob(Jobs[index], Vue);
 
         public void AddJob(string n, string s, string t, string ty) => _jobService.AddJob(Jobs, n, s, t, ty);
 
@@ -63,9 +62,7 @@ namespace EasyLibrary.ViewModels
 
         public void SwitchLogFormat() => _jobService.SwitchLogFormat(CurrentSettings);
 
-        public void AddEncryptionExtension(string ext) => _jobService.AddExtension(CurrentSettings, ext);
 
-        public void SetBusinessSoftware(string name) => _businessService.UpdateBusinessSoftware(CurrentSettings, name);
 
         public void ExecuteJobsFromArgs(string input)
         {
