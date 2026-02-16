@@ -1,59 +1,29 @@
-﻿//LoggerService.cs
-using System.Text.Json;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
-using EasyLibrary.Models;
-using System.Xml.Serialization;
+using System.Text.Json;
+using EasySave.Models;
 
-namespace EasyLibrary.Services;
+namespace EasySave.Services;
 
 public class LoggerService
-
 {
-    public string LogFormat { get; set; } = "json";
-    // On change le chemin pour qu'il crée un dossier "Logs" là où est ton projet
-    // AppDomain.CurrentDomain.BaseDirectory = le dossier où ton .exe est exécuté
-    private readonly string _logFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs");
-
-    public void WriteLog(LogEntry entry)
+    public void Write(LogEntry entry, bool isJson)
     {
-        // 1. Message de debug dans la console
-        Console.WriteLine(">>>> TENTATIVE D'ECRITURE DU LOG DANS : " + _logFolder);
+        string dir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs");
+        Directory.CreateDirectory(dir);
+        string path = Path.Combine(dir, $"{DateTime.Now:yyyy-MM-dd}.{(isJson ? "json" : "xml")}");
+        entry.Timestamp = DateTime.Now.ToString("G");
 
-        // Créer le dossier Logs s'il n'existe pas
-        if (!Directory.Exists(_logFolder))
+        lock (this)
         {
-            Directory.CreateDirectory(_logFolder);
-        }
-
-        // v1.1 : On définit l'extension selon le format choisi
-        string extension = LogFormat.ToLower();
-        string fileName = DateTime.Now.ToString("yyyy-MM-dd") + "." + extension;
-        string filePath = Path.Combine(_logFolder, fileName);
-
-        // On ajoute l'heure actuelle au log
-        entry.Timestamp = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
-
-        // 2. Logique de choix du format
-        if (extension == "json")
-        {
-            // format JSON
-            string jsonText = JsonSerializer.Serialize(entry, new JsonSerializerOptions { WriteIndented = true });
-            File.AppendAllText(filePath, jsonText + Environment.NewLine);
-        }
-        else
-        {
-            // format XML
-            XmlSerializer serializer = new XmlSerializer(typeof(LogEntry));
-
-            // On ouvre le fichier en mode "Append" (true)
-            using (StreamWriter sw = new StreamWriter(filePath, true))
+            if (isJson)
             {
-                serializer.Serialize(sw, entry);
-                sw.WriteLine(); // Pour séparer les logs
+                var logs = File.Exists(path) ? JsonSerializer.Deserialize<List<LogEntry>>(File.ReadAllText(path)) : new List<LogEntry>();
+                logs!.Add(entry);
+                File.WriteAllText(path, JsonSerializer.Serialize(logs, new JsonSerializerOptions { WriteIndented = true }));
             }
+            // on doit ajouter la logique pour le XMl ici
         }
-
-        // 3. Confirmation finale
-        Console.WriteLine(">>>> FICHIER CREE AVEC SUCCES : " + filePath);
-    }
+    }//Écrit physiquement les logs sur le disque. Il gère le choix entre JSON et XML de manière isolée
 }

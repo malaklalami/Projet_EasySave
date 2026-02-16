@@ -1,17 +1,14 @@
-﻿//LogEntry.cs
-using System;
+﻿namespace EasySave.Models;
 
-namespace EasyLibrary.Models;
-
-// Cette classe définit TOUTES les infos qu'on veut noter dans le journal
 public class LogEntry
 {
-    public string Timestamp { get; set; }      // L'heure exacte
-    public string JobName { get; set; }        // Le nom de la sauvegarde
-    public string SourcePath { get; set; }     // D'où vient le fichier
-    public string TargetPath { get; set; }     // Où il va
-    public long FileSize { get; set; }         // Taille en octets
-    public double TransferTimeMs { get; set; }  // Temps de copie (-1 si erreur)
-    public long EncryptionTimeMs { get; set; } //Temps de chiffrement (0 si pas chiffré, -1 si erreur)
+    public string Timestamp { get; set; } = string.Empty;
+    public string JobName { get; set; } = string.Empty;
+    public string Source { get; set; } = string.Empty;
+    public string Target { get; set; } = string.Empty;
+    public long FileSize { get; set; }
+    public double TransferTimeMs { get; set; }
+    public long EncryptionTimeMs { get; set; }
 }
-//
+
+//Structure d'une ligne de log (horodatage, temps de transfert, taille du fichier)

@@ -1,49 +1,32 @@
-﻿using System;
-using EasyLibrary.ViewModels;
-using EasyConsole; // Adapte selon ton namespace réel de ConsoleView
+﻿using EasyLibrary.ViewModels;
 
-namespace EasyConsole
+
+namespace EasyConsole;
+
+class Program
 {
-    class Program
+    static void Main(string[] args)
     {
-        static void Main(string[] args)
+        // 1. On crée le contrôleur (MainViewModel)
+        // Il charge automatiquement les jobs et settings au démarrage grâce à son constructeur.
+        MainViewModel viewModel = new MainViewModel();
+
+        // 2. On vérifie s'il y a des arguments (Mode ligne de commande : EasySave.exe 1-3)
+        if (args.Length > 0)
         {
-            ConsoleView view = new ConsoleView();
+            Console.WriteLine($"--- Mode Automatique : Exécution de {args[0]} ---");
+            // On appelle directement la méthode du contrôleur
+            viewModel.Execute(args[0]);
 
-            // 1. On charge les données silencieusement (pas de menu ici !)
-            view.ViewModel.LoadData();
-
-            // 2. On lie la vue pour que le service puisse envoyer des messages
-            view.ViewModel.Vue = view;
-
-            if (args.Length > 0)
-            {
-                // MODE LIGNE DE COMMANDE
-                Console.WriteLine($"--- Mode Automatique : Exécution de {args[0]} ---");
-
-                view.ViewModel.ExecuteJobsFromArgs(args[0]);
-
-                Console.WriteLine("\n[SUCCÈS] Exécution terminée. Appuyez sur une touche pour quitter.");
-                Console.ReadKey();
-            }
-            else
-            {
-                // MODE INTERACTIF
-                // On n'appelle Start que si on n'a pas d'arguments
-                view.ViewModel.Start();
-            }
+            Console.WriteLine("\n[TERMINÉ] Appuyez sur une touche pour quitter.");
+            Console.ReadKey();
+        }
+        else
+        {
+            // 3. MODE INTERACTIF (Menu)
+            // On délègue toute la gestion du menu à la classe dédiée
+            MenuHandler menu = new MenuHandler(viewModel);
+            menu.Run();
         }
     }
-    
 }
-// - extraire dans une classe la gestion des arguments
-// - améliorer le systeme de trad pour ne plus avoir de if / else
-// - extraire le système d'interpretation de 0-3;4 dans une classe dédiée qui renvoie une liste de job
-// - éviter de propager la vue aux services
-// - virer les méthodes de JobService qui ne sont pas de la copie
-// - virer la pluspart des méthodes add/update/delete job car on a besoin que de save la liste au niveau du controller
-// - faire la validation d'un job dans le controller
-// - Transformer log format en enum
-// - transformer backup type en enum
-// -  SettingsJsonService devrait proposer un cache et BusinessSoftware devrait s'en servir
-// - bizarre jobs.json et state.json qui contiennent la meme structure

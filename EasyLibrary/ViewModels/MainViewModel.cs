@@ -1,76 +1,73 @@
-﻿//MainViewModel.cs
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using EasyLibrary.Models;
-using EasyLibrary.Services;
+using System.Collections.ObjectModel;
+using System.Linq;
+using EasySave.Models;
+using EasySave.Services;
+using EasySave.Core;
 
-namespace EasyLibrary.ViewModels
+namespace EasyLibrary.ViewModels;
+
+public class MainViewModel
 {
-    public class MainViewModel
+    private readonly ConfigService _config = new();
+    private readonly JobManager _manager = new();
+    private readonly BackupService _backup;
+
+    // Cette propriété manquait (nécessaire pour la console)
+    public Settings CurrentSettings => _config.Current;
+
+    public ObservableCollection<BackupJob> Jobs { get; }
+
+    public MainViewModel()
     {
-        public IVue Vue { get; set; }
-        public List<BackUpJob> Jobs { get; set; }
-        public ConsoleSettingsJson CurrentSettings { get; set; }
+        _config.Load();
+        Jobs = new ObservableCollection<BackupJob>(_manager.Load());
+        // On passe le ConfigService au BackupService pour le cache logiciel métier
+        var crypto = new CryptoService("CryptoSoft.exe", "MY_KEY");
+        _backup = new BackupService(_config, crypto);
+    }
 
+    public void AddJob(string n, string s, string t, BackupType ty)
+    {
+        if (string.IsNullOrWhiteSpace(n) || !System.IO.Directory.Exists(s)) return;
+        var job = new BackupJob { Name = n, SourceDir = s, TargetDir = t, Type = ty };
+        Jobs.Add(job);
+        _manager.Save(Jobs.ToList());
+    }
 
-        private readonly JobService _jobService;
-        private readonly SettingsJsonService _settingsService = new SettingsJsonService();
-        private readonly JobManager _jobManager = new JobManager();
-
-        private BusinessSoftware _businessService = new BusinessSoftware();
-
-        public MainViewModel()
+    // Cette méthode manquait
+    public void DeleteJob(int index)
+    {
+        if (index >= 0 && index < Jobs.Count)
         {
-            // Initialisation des dépendances
-            var stateService = new StateService();
-            var loggerService = new LoggerService();
-            string basePath = AppDomain.CurrentDomain.BaseDirectory;
-            string cryptoFileName = OperatingSystem.IsWindows() ? "CryptoSoft.exe" : "CryptoSoft";
-            var cryptoService = new CryptoService(Path.Combine(basePath, cryptoFileName), "MA_CLE_XOR_123");
-
-            // Le JobService reçoit tout ce dont il a besoin pour travailler
-            _jobService = new JobService(stateService, loggerService, cryptoService, _settingsService, _jobManager);
+            Jobs.RemoveAt(index);
+            _manager.Save(Jobs.ToList());
         }
+    }
 
-        public void LoadData()
+    // Cette méthode manquait
+    public void SwitchLanguage()
+    {
+        _config.Current.Language = (_config.Current.Language == "fr") ? "en" : "fr";
+        _config.Save();
+    }
+
+    public void Execute(string input)
+    {
+        var selected = JobParser.ParseSelection(input, Jobs.Count);
+        foreach (var i in selected)
         {
-            CurrentSettings = _settingsService.Load();
-            Jobs = _jobManager.loadJobs("jobs.json");
-
-        }
-
-        public void Start()
-        {
-            LoadData(); // On charge les données
-            Vue?.AfficheMenuPrincipal(); // On affiche le menu
-        }
-
-        // Appels directs au service
-        public void ExecuteJob(int index) => _jobService.ExecuteJob(Jobs[index], CurrentSettings.EncryptionExtensions, Vue, CurrentSettings.BusinessSoftware);
-
-        public void AddJob(string n, string s, string t, string ty) => _jobService.AddJob(Jobs, n, s, t, ty);
-
-        public void EditJob(int index, string name, string source, string target, string type)
-        {
-            _jobService.UpdateJob(Jobs, index, name, source, target, type);
-        }
-
-        public void ClearAllJobs() => _jobService.ClearJobs(Jobs);
-
-        public void DeleteJob(int index) => _jobService.RemoveJob(Jobs, index);
-
-        public void SwitchLanguage() => _jobService.SwitchLanguage(CurrentSettings);
-
-        public void SwitchLogFormat() => _jobService.SwitchLogFormat(CurrentSettings);
-
-        public void AddEncryptionExtension(string ext) => _jobService.AddExtension(CurrentSettings, ext);
-
-        public void SetBusinessSoftware(string name) => _businessService.UpdateBusinessSoftware(CurrentSettings, name);
-
-        public void ExecuteJobsFromArgs(string input)
-        {
-            _jobService.ExecuteFromCommandLine(input, Jobs, CurrentSettings, Vue);
+            _backup.Execute(Jobs[i], state => {
+                // Optionnel : Console.WriteLine($"Progression {state.JobName}: {state.Progress}%");
+            });
         }
     }
 }
+//Il valide si les données sont correctes (dossiers existants, noms valides)
+
+//Il utilise le JobParser pour comprendre la sélection
+
+//Il lance le BackupService
+
+//Il met à jour l'interface via le système de notification (Action ou Binding)

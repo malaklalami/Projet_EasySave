@@ -1,47 +1,21 @@
-﻿using EasyLibrary.Models;
-using System;
-using System.Collections.Generic;
-//JobManager.cs
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
+using System.IO;
 using System.Text.Json;
-using System.Threading.Tasks;
+using EasySave.Models;
 
+namespace EasySave.Services;
 
-namespace EasyLibrary.Services
+public class JobManager
 {
-    public class JobManager
+    private readonly string _path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "jobs.json");
+
+    public List<BackupJob> Load()
     {
-        public List<BackUpJob> loadJobs(string configPath)
-        {
-            if (!File.Exists(configPath)) return new List<BackUpJob>();
-            string json = File.ReadAllText(configPath);
-            return JsonSerializer.Deserialize<List<BackUpJob>>(json) ?? new List<BackUpJob>();
-        }
-
-        public void saveJobs(List<BackUpJob> Jobs)
-        {
-            try
-            {
-
-                var options = new JsonSerializerOptions { WriteIndented = true };
-                string json = JsonSerializer.Serialize(Jobs, options);
-
-                // On écrit le fichier (il sera créé s'il n'existe pas)
-                File.WriteAllText("jobs.json", json);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Erreur lors de la sauvegarde : " + ex.Message);
-            }
-        }
-
-        public void clearJobs()
-        {
-            if (File.Exists("jobs.json"))
-            {
-                File.Delete("jobs.json");
-            }
-        }
+        if (!File.Exists(_path)) return new List<BackupJob>();
+        return JsonSerializer.Deserialize<List<BackupJob>>(File.ReadAllText(_path)) ?? new List<BackupJob>();
     }
+
+    public void Save(List<BackupJob> jobs) => File.WriteAllText(_path, JsonSerializer.Serialize(jobs, new JsonSerializerOptions { WriteIndented = true }));
 }
+
+//Ne fait que lire et écrire la liste des jobs dans jobs.json. Il n'a aucune logique de copie.
