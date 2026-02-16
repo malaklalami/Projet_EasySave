@@ -1,4 +1,5 @@
-﻿using System;
+﻿//MainViewModel.cs
+using System;
 using System.Collections.Generic;
 using System.IO;
 using EasyLibrary.Models;
@@ -17,7 +18,7 @@ namespace EasyLibrary.ViewModels
         private readonly SettingsJsonService _settingsService = new SettingsJsonService();
         private readonly JobManager _jobManager = new JobManager();
 
-        private BusinessSoftwareService _businessService = new BusinessSoftwareService();
+        private BusinessSoftware _businessService = new BusinessSoftware();
 
         public MainViewModel()
         {

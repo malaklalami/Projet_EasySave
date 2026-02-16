@@ -1,11 +1,12 @@
-﻿using System;
+﻿//BusinessSoftware.cs
+using System;
 using System.Diagnostics;
 using System.Linq;
 using EasyLibrary.Models;
 
 namespace EasyLibrary.Services
 {
-    public class BusinessSoftwareService
+    public class BusinessSoftware
     {
         private readonly SettingsJsonService _settingsService = new SettingsJsonService();
 

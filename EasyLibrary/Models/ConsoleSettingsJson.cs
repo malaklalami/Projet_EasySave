@@ -1,4 +1,5 @@
-﻿using System;
+﻿//ConsoleSettingsJson.cs
+using System;
 namespace EasyLibrary.Models
 {
 	public class ConsoleSettingsJson

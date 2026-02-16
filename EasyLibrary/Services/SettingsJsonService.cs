@@ -1,4 +1,5 @@
-﻿using System;
+﻿//SettingsJsonService.cs
+using System;
 using System.Text.Json;
 using System.IO;
 using EasyLibrary.Models;

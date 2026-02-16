@@ -1,4 +1,5 @@
-﻿using System;
+﻿//JobService.cs
+using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -15,7 +16,7 @@ namespace EasyLibrary.Services
         private readonly CryptoService _cryptoService;
         private readonly SettingsJsonService _settingsService;
         private readonly JobManager _jobManager;
-        private readonly BusinessSoftwareService _businessService = new BusinessSoftwareService();
+        private readonly BusinessSoftware _businessService = new BusinessSoftware();
         // Le constructeur reçoit toutes les dépendances nécessaires pour fonctionner
         public JobService(StateService stateService, LoggerService loggerService, CryptoService cryptoService, SettingsJsonService settingsService, JobManager jobManager)
         {

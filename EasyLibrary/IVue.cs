@@ -1,4 +1,5 @@
-﻿using EasyLibrary.Models;
+﻿//Ivue.cs
+using EasyLibrary.Models;
 using System;
 
 public interface IVue
