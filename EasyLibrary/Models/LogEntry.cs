@@ -14,3 +14,4 @@ public class LogEntry
     public double TransferTimeMs { get; set; }  // Temps de copie (-1 si erreur)
     public long EncryptionTimeMs { get; set; } //Temps de chiffrement (0 si pas chiffré, -1 si erreur)
 }
+//
