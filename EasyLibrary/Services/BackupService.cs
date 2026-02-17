@@ -15,12 +15,22 @@ public class BackupService
     public BackupService(ConfigService config, CryptoService crypto) { _config = config; _crypto = crypto; }
 
     public void Execute(BackupJob job, Action<BackupState> onProgress)
+
     {
+        // 1. VERIFICATION DE SECURITE (Avant tout calcul)
+        // Si le logiciel métier est lancé, on quitte immédiatement.
+        if (Process.GetProcessesByName(_config.Current.BusinessSoftware).Length > 0)
+        {
+            return;
+        }
+
+        // 2. PREPARATION (Seulement si la sécurité est OK)
         var files = Directory.GetFiles(job.SourceDir, "*.*", SearchOption.AllDirectories);
+
         for (int i = 0; i < files.Length; i++)
         {
+            // 3. RE-VERIFICATION (Au cas où il est ouvert pendant la copie)
             if (Process.GetProcessesByName(_config.Current.BusinessSoftware).Length > 0) return;
-
             string dest = files[i].Replace(job.SourceDir, job.TargetDir);
             Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
 

@@ -9,4 +9,4 @@ public class BackupJob
     public string TargetDir { get; set; } = string.Empty;
     public BackupType Type { get; set; } = BackupType.Full;
 }
-//Contient uniquement les paramètres d'un travail (Nom, Dossier Source, Dossier Cible, Type). C'est ce qui est stocké dans jobs.json.
+//Contient uniquement les paramètres d'un travail (Nom, Dossier Source, Dossier Cible, Type) c ce qui est stocké dans jobs.json
