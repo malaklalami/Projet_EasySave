@@ -1,6 +1,5 @@
 ﻿using EasySave.Core;
 using EasyLibrary.ViewModels;
-using EasyLibrary.ViewModels;
 
 namespace EasyConsole;
 
@@ -20,7 +19,11 @@ public class MenuHandler
         bool exit = false;
         while (!exit)
         {
+            // IMPORTANT : On définit isFr ici pour l'utiliser dans le switch
+            bool isFr = _vm.CurrentSettings.Language == "fr";
+
             ShowMenu();
+
             string choice = Console.ReadLine() ?? "";
             switch (choice)
             {
@@ -29,8 +32,21 @@ public class MenuHandler
                 case "3": _vm.SwitchLanguage(); break;
                 case "4": _jobUI.EditJob(); break;
                 case "5": _jobUI.DeleteJob(); break;
+
+                case "6":
+                    Console.Write(isFr ? "Extension à ajouter/retirer (ex: .txt) : " : "Extension to add/remove (e.g., .txt): ");
+                    string ext = Console.ReadLine() ?? "";
+                    _vm.ManageEncryptionExtensions(ext);
+                    break;
+
+                case "7":
+                    Console.Write(isFr ? "Nom du logiciel métier (ex: Calculator) : " : "Business software name (e.g., Calculator): ");
+                    string soft = Console.ReadLine() ?? "";
+                    _vm.UpdateBusinessSoftware(soft);
+                    break;
+
                 case "q": exit = true; break;
-                default: Console.WriteLine("Choix invalide."); break;
+                default: Console.WriteLine(isFr ? "Choix invalide." : "Invalid choice."); break;
             }
         }
     }
@@ -40,7 +56,6 @@ public class MenuHandler
         bool isFr = _vm.CurrentSettings.Language == "fr";
         Console.WriteLine(isFr ? "\n--- Menu EasySave ---" : "\n--- EasySave Menu ---");
 
-        // On affiche les jobs actuels
         for (int i = 0; i < _vm.Jobs.Count; i++)
         {
             Console.WriteLine($"[{i}] {_vm.Jobs[i].Name}");
@@ -48,11 +63,13 @@ public class MenuHandler
 
         if (isFr)
         {
-            Console.WriteLine("1. Créer | 2. Lancer | 3. Langue | 4. Modifier | 5. Supprimer | q. Quitter");
+            Console.WriteLine("1. Créer | 2. Lancer | 3. Langue | 4. Modifier | 5. Supprimer");
+            Console.WriteLine("6. Extensions Cryptage | 7. Logiciel Métier | q. Quitter");
         }
         else
         {
-            Console.WriteLine("1. Create | 2. Run | 3. Language | 4. Edit | 5. Delete | q. Quit");
+            Console.WriteLine("1. Create | 2. Run | 3. Language | 4. Edit | 5. Delete");
+            Console.WriteLine("6. Encryption Ext | 7. Business Soft | q. Quit");
         }
     }
 }

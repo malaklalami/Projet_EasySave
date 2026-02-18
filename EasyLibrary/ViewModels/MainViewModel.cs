@@ -63,6 +63,30 @@ public class MainViewModel
             });
         }
     }
+
+    public void ManageEncryptionExtensions(string extension)
+    {
+        // On normalise (ex: "txt" devient ".txt")
+        if (!extension.StartsWith(".")) extension = "." + extension;
+        extension = extension.ToLower();
+
+        if (_config.Current.EncryptionExtensions.Contains(extension))
+        {
+            _config.Current.EncryptionExtensions.Remove(extension);
+            Console.WriteLine($"[LOG] {extension} retiré de la liste de cryptage.");
+        }
+        else
+        {
+            _config.Current.EncryptionExtensions.Add(extension);
+            Console.WriteLine($"[LOG] {extension} ajouté à la liste de cryptage.");
+        }
+        _config.Save(); // On enregistre dans settings.json
+    }
+    public void UpdateBusinessSoftware(string name)
+    {
+        _config.Current.BusinessSoftware = name;
+        _config.Save();
+    }
 }
 //Il valide si les données sont correctes (dossiers existants, noms valides)
 
