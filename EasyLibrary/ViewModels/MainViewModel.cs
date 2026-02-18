@@ -82,6 +82,11 @@ public class MainViewModel
         }
         _config.Save(); // On enregistre dans settings.json
     }
+    public void UpdateBusinessSoftware(string name)
+    {
+        _config.Current.BusinessSoftware = name;
+        _config.Save();
+    }
 }
 //Il valide si les données sont correctes (dossiers existants, noms valides)
 
