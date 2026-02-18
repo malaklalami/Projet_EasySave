@@ -18,7 +18,7 @@ public class CryptoService
         var sw = Stopwatch.StartNew();
         try
         {
-            var start = new ProcessStartInfo { FileName = _path, Arguments = $"\"{file}\" \"_key\"", CreateNoWindow = true, UseShellExecute = false };
+            var start = new ProcessStartInfo { FileName = _path, Arguments =  $"\"{file}\" \"{_key}\"", CreateNoWindow = true, UseShellExecute = false };
             using var p = Process.Start(start);
             p?.WaitForExit();
             return p?.ExitCode == 0 ? sw.ElapsedMilliseconds : -1;
