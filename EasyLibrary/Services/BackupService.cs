@@ -11,26 +11,29 @@ public class BackupService
     private readonly ConfigService _config;
     private readonly LoggerService _logger = new();
     private readonly CryptoService _crypto;
+    private readonly BusinessSoftwareMonitor _monitor;
 
-    public BackupService(ConfigService config, CryptoService crypto) { _config = config; _crypto = crypto; }
+    public BackupService(ConfigService config, CryptoService crypto) { _config = config; _crypto = crypto; var tempLogger = new LoggerService(); _monitor = new BusinessSoftwareMonitor(_config, _logger); }
 
     public void Execute(BackupJob job, Action<BackupState> onProgress)
 
     {
-        // 1. VERIFICATION DE SECURITE (Avant tout calcul)
-        // Si le logiciel métier est lancé, on quitte immédiatement.
-        if (Process.GetProcessesByName(_config.Current.BusinessSoftware).Length > 0)
-        {
-            return;
-        }
+
+        // VERIFICATION DE SECURITE (Avant tout calcul)
+        // Si le logiciel métier est lancé, on bloque ici jusqu'à sa fermeture.
+        _monitor.CheckActivity(job.Name, onProgress, true);
 
         // 2. PREPARATION (Seulement si la sécurité est OK)
         var files = Directory.GetFiles(job.SourceDir, "*.*", SearchOption.AllDirectories);
 
         for (int i = 0; i < files.Length; i++)
+
         {
-            // 3. RE-VERIFICATION (Au cas où il est ouvert pendant la copie)
-            if (Process.GetProcessesByName(_config.Current.BusinessSoftware).Length > 0) return;
+            // RE-VERIFICATION (Au cas où il est ouvert pendant la copie)
+            // Cette ligne va bloquer (pause) tant que le logiciel est ouvert
+            _monitor.CheckActivity(job.Name, onProgress);
+
+
             string dest = files[i].Replace(job.SourceDir, job.TargetDir);
             Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
 
