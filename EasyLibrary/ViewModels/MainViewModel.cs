@@ -11,10 +11,13 @@ namespace EasyLibrary.ViewModels;
 public class MainViewModel
 {
     private readonly ConfigService _config = new();
+
     private readonly JobManager _manager = new();
+
     private readonly BackupService _backup;
 
-    // Cette propriété manquait (nécessaire pour la console)
+    public LanguageService Language { get; } = new();
+
     public Settings CurrentSettings => _config.Current;
 
     public ObservableCollection<BackupJob> Jobs { get; }
@@ -22,6 +25,7 @@ public class MainViewModel
     public MainViewModel()
     {
         _config.Load();
+        Language.Load(CurrentSettings.Language);
         Jobs = new ObservableCollection<BackupJob>(_manager.Load());
         // On passe le ConfigService au BackupService pour le cache logiciel métier
         var crypto = new CryptoService("CryptoSoft.exe", "MY_KEY");
@@ -36,7 +40,7 @@ public class MainViewModel
         _manager.Save(Jobs.ToList());
     }
 
-    // Cette méthode manquait
+    
     public void DeleteJob(int index)
     {
         if (index >= 0 && index < Jobs.Count)
@@ -46,10 +50,25 @@ public class MainViewModel
         }
     }
 
-    // Cette méthode manquait
-    public void SwitchLanguage()
+    public void ClearAllJobs()
     {
-        _config.Current.Language = (_config.Current.Language == "fr") ? "en" : "fr";
+        Jobs.Clear();
+        _manager.Save(Jobs.ToList());
+    }
+
+
+    public void SetLanguage(string langCode)
+    {
+        CurrentSettings.Language = langCode;
+        _config.Save();
+        Language.Load(langCode);
+    }
+
+    public void SwitchLogFormat()
+    {
+        CurrentSettings.LogFormat = (CurrentSettings.LogFormat == LogFormat.Json)
+            ? LogFormat.Xml
+            : LogFormat.Json;
         _config.Save();
     }
 

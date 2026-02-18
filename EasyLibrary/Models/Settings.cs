@@ -10,4 +10,5 @@ public class Settings
     public string BusinessSoftware { get; set; } = "Calculator";
     public List<string> EncryptionExtensions { get; set; } = new();
 }
+
 //Stocke la langue, le format des logs, le nom du logiciel métier et les extensions à chiffrer

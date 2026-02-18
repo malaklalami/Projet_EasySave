@@ -1,0 +1,48 @@
+{
+  "Menu_MainTitle": "--- EasySave Menu ---",
+  "Menu_Option1": "1. Create a backup job",
+  "Menu_Option2": "2. Run one or more backups (e.g., 1 or 1;3 or 0-4)",
+  "Menu_Option3": "3. Switch language",
+  "Menu_Option4": "4. Change log format",
+  "Menu_Option5": "5. Edit a backup job",
+  "Menu_Option6": "6. Delete one backup job",
+  "Menu_Option7": "7. Clear all jobs",
+  "Menu_Option8": "8. Configure encryption extensions",
+  "Menu_Option9": "9. Configure business software",
+  "Menu_Quit": "q. Quit",
+
+  "Lang_Back": "b. Back",
+
+  "Job_List_Title": "--- Jobs List ---",
+  "Job_List_Empty": "No jobs configured.",
+  "Job_Label_Name": "Name",
+  "Job_Label_Source": "Source",
+
+  "Create_Title": "--- Create a Backup Job ---",
+  "Create_Success": "Job added successfully!",
+  "Input_JobName": "Job Name: ",
+  "Input_SourcePath": "Source Path: ",
+  "Input_TargetPath": "Target Path: ",
+  "Input_Type": "Type (Full/Differential): ",
+  "Error_DirNotExists": "Error: This directory does not exist.",
+  "Error_ValidSource": "Enter a valid source path: ",
+  "Error_InvalidTarget": "Error: Destination must be a full path (e.g., C:\\Save).",
+  "Invalid_Choice": "Invalid choice. Please try again.",
+
+  "Edit_Title": "--- Leave empty to keep current value ---",
+  "Edit_Success": "Job #{0} ({1}) has been updated!",
+  "Edit_Select": "Job number to edit: ",
+  "Delete_Select": "Enter the job number to delete: ",
+  "Delete_Success": "Job #{0} ({1}) has been successfully deleted!",
+
+  "Run_Title": "--- Run a backup ---",
+  "Run_Input": "Enter number(s) (ex: 1, 0-3, 1;3) : ",
+  "Run_Finished": "Execution finished.",
+
+  "Success_Finished": "Success: {0} finished.",
+  "Error_SourceNotFound": "[ERROR] Source directory not found: {0}",
+  "Error_Global": "[ERROR] Could not execute {0}. Invalid path or protected area.",
+  "Msg_LangChanged": "Language changed!",
+  "Msg_LogFormatChanged": "Log format changed: ",
+  "Msg_AllJobsDeleted": ">>>> All jobs have been deleted."
+}

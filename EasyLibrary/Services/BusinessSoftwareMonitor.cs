@@ -52,3 +52,6 @@ public class BusinessSoftwareMonitor
         }
     }
 }
+
+// Gère la suspension de la sauvegarde tant que le processus métier cible est détecté.
+// Assure l'unicité de l'inscription dans les logs et la mise à jour en temps réel de l'état (BackupState) pour l'interface utilisateur.
