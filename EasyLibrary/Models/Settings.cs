@@ -9,6 +9,8 @@ public class Settings
     public LogFormat LogFormat { get; set; } = LogFormat.Json;
     public string BusinessSoftware { get; set; } = "Calculator";
     public List<string> EncryptionExtensions { get; set; } = new();
+    public LogTarget LogStrategy { get; set; } = LogTarget.Local; // Par défaut en local
+    public string RemoteIp { get; set; } = "127.0.0.1";
 }
 
 //Stocke la langue, le format des logs, le nom du logiciel métier et les extensions à chiffrer
