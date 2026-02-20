@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks; // Ajouté pour le Task
 using EasySave.Models;
 using EasySave.Services;
 using EasySave.Core;
@@ -11,25 +12,30 @@ namespace EasyLibrary.ViewModels;
 public class MainViewModel
 {
     private readonly ConfigService _config = new();
-
     private readonly JobManager _manager = new();
-
     private readonly BackupService _backup;
 
     public LanguageService Language { get; } = new();
 
-    public Settings CurrentSettings => _config.Current;
+    // Propriété utilisée par SettingsUI
+    public Settings Settings => _config.Current;
 
     public ObservableCollection<BackupJob> Jobs { get; }
 
     public MainViewModel()
     {
         _config.Load();
-        Language.Load(CurrentSettings.Language);
+        Language.Load(Settings.Language);
         Jobs = new ObservableCollection<BackupJob>(_manager.Load());
-        // On passe le ConfigService au BackupService pour le cache logiciel métier
+
         var crypto = new CryptoService("CryptoSoft.exe", "MY_KEY");
         _backup = new BackupService(_config, crypto);
+    }
+
+    // Méthode appelée par SettingsUI
+    public void SaveSettings()
+    {
+        _config.Save();
     }
 
     public void AddJob(string n, string s, string t, BackupType ty)
@@ -40,7 +46,6 @@ public class MainViewModel
         _manager.Save(Jobs.ToList());
     }
 
-    
     public void DeleteJob(int index)
     {
         if (index >= 0 && index < Jobs.Count)
@@ -56,61 +61,53 @@ public class MainViewModel
         _manager.Save(Jobs.ToList());
     }
 
-
     public void SetLanguage(string langCode)
     {
-        CurrentSettings.Language = langCode;
+        Settings.Language = langCode;
         _config.Save();
         Language.Load(langCode);
     }
 
     public void SwitchLogFormat()
     {
-        CurrentSettings.LogFormat = (CurrentSettings.LogFormat == LogFormat.Json)
+        Settings.LogFormat = (Settings.LogFormat == LogFormat.Json)
             ? LogFormat.Xml
             : LogFormat.Json;
         _config.Save();
     }
 
-    public void Execute(string input)
+    // Passé en async Task pour supporter le logger TCP persistant
+    public async Task Execute(string input)
     {
         var selected = JobParser.ParseSelection(input, Jobs.Count);
         foreach (var i in selected)
         {
-            _backup.Execute(Jobs[i], state => {
-                // Optionnel : Console.WriteLine($"Progression {state.JobName}: {state.Progress}%");
+            // On ajoute 'await' ici
+            await _backup.Execute(Jobs[i], state => {
+                // Progression
             });
         }
     }
 
     public void ManageEncryptionExtensions(string extension)
     {
-        // On normalise (ex: "txt" devient ".txt")
         if (!extension.StartsWith(".")) extension = "." + extension;
         extension = extension.ToLower();
 
-        if (_config.Current.EncryptionExtensions.Contains(extension))
+        if (Settings.EncryptionExtensions.Contains(extension))
         {
-            _config.Current.EncryptionExtensions.Remove(extension);
-            Console.WriteLine($"[LOG] {extension} retiré de la liste de cryptage.");
+            Settings.EncryptionExtensions.Remove(extension);
         }
         else
         {
-            _config.Current.EncryptionExtensions.Add(extension);
-            Console.WriteLine($"[LOG] {extension} ajouté à la liste de cryptage.");
+            Settings.EncryptionExtensions.Add(extension);
         }
-        _config.Save(); // On enregistre dans settings.json
+        _config.Save();
     }
+
     public void UpdateBusinessSoftware(string name)
     {
-        _config.Current.BusinessSoftware = name;
+        Settings.BusinessSoftware = name;
         _config.Save();
     }
 }
-//Il valide si les données sont correctes (dossiers existants, noms valides)
-
-//Il utilise le JobParser pour comprendre la sélection
-
-//Il lance le BackupService
-
-//Il met à jour l'interface via le système de notification (Action ou Binding)

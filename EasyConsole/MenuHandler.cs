@@ -1,5 +1,6 @@
-﻿using EasySave.Core;
-using EasyLibrary.ViewModels;
+﻿using EasyLibrary.ViewModels;
+using EasySave.Core;
+using EasySave.Models;
 
 namespace EasyConsole;
 
@@ -47,6 +48,10 @@ public class MenuHandler
                     Console.Write("> ");
                     string soft = Console.ReadLine() ?? "";
                     _vm.UpdateBusinessSoftware(soft);
+                    break;
+
+                case "10":
+                    SettingsUI.LogDestination(_vm); 
                     break;
 
                 case "q": exit = true; break;
@@ -120,6 +125,8 @@ public class MenuHandler
         Console.WriteLine(_vm.Language.Get("Menu_Option7"));
         Console.WriteLine(_vm.Language.Get("Menu_Option8"));
         Console.WriteLine(_vm.Language.Get("Menu_Option9"));
+        Console.WriteLine(_vm.Language.Get("Menu_Option10") ?? "Configurer la destination des logs (Local/Serveur)");
         Console.WriteLine(_vm.Language.Get("Menu_Quit"));
+
     }
 }

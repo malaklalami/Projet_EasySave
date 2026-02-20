@@ -9,6 +9,7 @@
   "Menu_Option7": "7. Effacer tous les travaux",
   "Menu_Option8": "8. Configurer les extensions à chiffrer",
   "Menu_Option9": "9. Configurer le logiciel métier",
+  "Menu_Option10":"10. Configurer endroit cible des logs",
   "Menu_Quit": "q. Quitter",
 
   "Lang_Back": "b. Retour",
