@@ -14,6 +14,7 @@ public class MainViewModel
     private readonly ConfigService _config = new();
     private readonly JobManager _manager = new();
     private readonly BackupService _backup;
+    private readonly BusinessSoftwareWatcher _watcher;
 
     public LanguageService Language { get; } = new();
 
@@ -30,6 +31,21 @@ public class MainViewModel
 
         var crypto = new CryptoService("CryptoSoft.exe", "MY_KEY");
         _backup = new BackupService(_config, crypto);
+
+        _watcher = new BusinessSoftwareWatcher(_config);
+        InitializeWatcher();
+    }
+    private void InitializeWatcher()
+    {
+        _watcher.OnSoftwareDetected = () =>
+        {
+            _backup.Pause();
+        };
+        _watcher.OnSoftwareClosed = () =>
+        {
+            _backup.Resume();
+        };
+        _watcher.Start();
     }
 
     // Méthode appelée par SettingsUI
@@ -110,4 +126,4 @@ public class MainViewModel
         Settings.BusinessSoftware = name;
         _config.Save();
     }
-}
+} 
