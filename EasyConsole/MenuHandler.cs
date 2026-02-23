@@ -33,25 +33,15 @@ public class MenuHandler
                 case "4": _vm.SwitchLogFormat(); break;
                 case "5": _jobUI.EditJob(); break;
                 case "6": _jobUI.DeleteJob(); break;
-                case "7": _vm.ClearAllJobs();break;
+                case "7": _vm.ClearAllJobs(); break;
 
 
-                case "8":
-                    Console.WriteLine(_vm.Language.Get("Menu_Option8"));
-                    Console.Write("> ");
-                    string ext = Console.ReadLine() ?? "";
-                    _vm.ManageEncryptionExtensions(ext);
-                    break;
+                case "8":EncryptionExtensionsMenu();break;
 
-                case "9":
-                    Console.WriteLine(_vm.Language.Get("Menu_Option9"));
-                    Console.Write("> ");
-                    string soft = Console.ReadLine() ?? "";
-                    _vm.UpdateBusinessSoftware(soft);
-                    break;
+                case "9":BusinessSoftwareMenu(); break;
 
                 case "10":
-                    SettingsUI.LogDestination(_vm); 
+                    SettingsUI.LogDestination(_vm);
                     break;
 
                 case "q": exit = true; break;
@@ -63,14 +53,11 @@ public class MenuHandler
     private void ChangeLanguageMenu()
     {
         Console.Clear();
-        Console.WriteLine("--- Language / Langue ---");
+        Console.WriteLine(_vm.Language.Get("Lang_Menu_Title"));
+        Console.WriteLine(_vm.Language.Get("Lang_Option_En"));
+        Console.WriteLine(_vm.Language.Get("Lang_Option_Fr"));
+        Console.WriteLine(_vm.Language.Get("Lang_Back"));
 
-
-        Console.WriteLine("1. English");
-        Console.WriteLine("2. Français");
-
-
-        Console.WriteLine("b. " + _vm.Language.Get("Lang_Back"));
 
         Console.Write("\n> ");
         string choice = Console.ReadLine() ?? "";
@@ -79,19 +66,111 @@ public class MenuHandler
         {
             case "1":
                 _vm.SetLanguage("en");
+                Console.WriteLine(_vm.Language.Get("Lang_Confirm_En"));
+                Thread.Sleep(1000); // Pour laisser le temps de lire la confirmation
                 break;
             case "2":
                 _vm.SetLanguage("fr");
+                Console.WriteLine(_vm.Language.Get("Lang_Confirm_Fr"));
+                Thread.Sleep(1000);
                 break;
             case "b":
                 return;
             default:
-                Console.WriteLine("Invalid choice / Choix invalide.");
+                Console.WriteLine(_vm.Language.Get("Invalid_Choice"));
                 Thread.Sleep(1000);
                 break;
         }
 
     }
+
+    private void EncryptionExtensionsMenu()
+    {
+        bool back = false;
+        while (!back)
+        {
+            Console.Clear();
+            Console.WriteLine(_vm.Language.Get("Ext_Menu_Title"));
+
+           
+            var current = _vm.Settings.EncryptionExtensions;
+            string list = current.Any() ? string.Join(", ", current) : _vm.Language.Get("No_Extensions");
+            Console.WriteLine($"{string.Format(_vm.Language.Get("Current_Extensions"), list)}\n");
+
+            Console.WriteLine(_vm.Language.Get("Ext_Option_Add"));
+            Console.WriteLine(_vm.Language.Get("Ext_Option_Clear"));
+            Console.WriteLine(_vm.Language.Get("Lang_Back"));
+
+            Console.Write("\n> ");
+            string choice = Console.ReadLine() ?? "";
+
+            
+            switch (choice)
+            {
+                case "1":
+                    Console.Write(_vm.Language.Get("Manage_Instructions_Ext") + " ");
+                    string ext = Console.ReadLine() ?? "";
+                    _vm.ManageEncryptionExtensions(ext);
+                    Console.WriteLine(_vm.Language.Get("Action_Success"));
+                    Thread.Sleep(800);
+                    break;
+                case "2":
+                    _vm.Settings.EncryptionExtensions.Clear();
+                    _vm.SaveSettings();
+                    Console.WriteLine(_vm.Language.Get("Action_Success"));
+                    Thread.Sleep(800);
+                    break;
+                case "b":
+                    back = true;
+                    break;
+                default:
+                    Console.WriteLine(_vm.Language.Get("Invalid_Choice"));
+                    Thread.Sleep(800);
+                    break;
+            }
+        }
+    }
+
+    private void BusinessSoftwareMenu()
+    {
+        Console.Clear();
+        Console.WriteLine(_vm.Language.Get("Soft_Menu_Title"));
+
+        string current = _vm.Settings.BusinessSoftware;
+        string softDisplay = !string.IsNullOrEmpty(current) ? current : _vm.Language.Get("No_Software");
+        Console.WriteLine($"{string.Format(_vm.Language.Get("Current_Software"), softDisplay)}\n");
+
+        Console.WriteLine(_vm.Language.Get("Soft_Option_Update"));
+        Console.WriteLine(_vm.Language.Get("Soft_Option_Delete"));
+        Console.WriteLine(_vm.Language.Get("Lang_Back"));
+
+        Console.Write("\n> ");
+        string choice = Console.ReadLine() ?? "";
+
+        
+        switch (choice)
+        {
+            case "1":
+                Console.Write(_vm.Language.Get("Manage_Instructions_Soft") + " ");
+                string soft = Console.ReadLine() ?? "";
+                _vm.UpdateBusinessSoftware(soft);
+                Console.WriteLine(_vm.Language.Get("Action_Success"));
+                Thread.Sleep(1000);
+                break;
+            case "2":
+                _vm.UpdateBusinessSoftware("");
+                Console.WriteLine(_vm.Language.Get("Action_Success"));
+                Thread.Sleep(1000);
+                break;
+            case "b":
+                return;
+            default:
+                Console.WriteLine(_vm.Language.Get("Invalid_Choice"));
+                Thread.Sleep(1000);
+                break;
+        }
+    }
+
 
     private void ShowMenu()
     {
@@ -119,13 +198,13 @@ public class MenuHandler
         Console.WriteLine(_vm.Language.Get("Menu_Option1"));
         Console.WriteLine(_vm.Language.Get("Menu_Option2"));
         Console.WriteLine(_vm.Language.Get("Menu_Option3"));
-        Console.WriteLine(_vm.Language.Get("Menu_Option4"));
+        Console.WriteLine($"{_vm.Language.Get("Menu_Option4")} [{_vm.Settings.LogFormat}]");
         Console.WriteLine(_vm.Language.Get("Menu_Option5"));
         Console.WriteLine(_vm.Language.Get("Menu_Option6"));
         Console.WriteLine(_vm.Language.Get("Menu_Option7"));
-        Console.WriteLine(_vm.Language.Get("Menu_Option8"));
-        Console.WriteLine(_vm.Language.Get("Menu_Option9"));
-        Console.WriteLine(_vm.Language.Get("Menu_Option10") ?? "Configurer la destination des logs (Local/Serveur)");
+        Console.WriteLine($"{_vm.Language.Get("Menu_Option8")} [ {(_vm.Settings.EncryptionExtensions.Any() ? string.Join(", ", _vm.Settings.EncryptionExtensions) : _vm.Language.Get("No_Extensions"))} ]");
+        Console.WriteLine($"{_vm.Language.Get("Menu_Option9")} [ {(!string.IsNullOrEmpty(_vm.Settings.BusinessSoftware) ? _vm.Settings.BusinessSoftware : _vm.Language.Get("No_Software"))} ]");
+        Console.WriteLine(_vm.Language.Get("Menu_Option10"));
         Console.WriteLine(_vm.Language.Get("Menu_Quit"));
 
     }

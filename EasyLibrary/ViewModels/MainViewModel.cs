@@ -107,18 +107,17 @@ public class MainViewModel
 
     public void ManageEncryptionExtensions(string extension)
     {
-        if (!extension.StartsWith(".")) extension = "." + extension;
-        extension = extension.ToLower();
+        if (string.IsNullOrWhiteSpace(extension)) return;
 
-        if (Settings.EncryptionExtensions.Contains(extension))
-        {
-            Settings.EncryptionExtensions.Remove(extension);
-        }
-        else
+        extension = extension.Trim().ToLower();
+        if (!extension.StartsWith(".")) extension = "." + extension;
+
+        
+        if (!Settings.EncryptionExtensions.Contains(extension))
         {
             Settings.EncryptionExtensions.Add(extension);
+            _config.Save();
         }
-        _config.Save();
     }
 
     public void UpdateBusinessSoftware(string name)

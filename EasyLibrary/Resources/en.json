@@ -9,10 +9,30 @@
   "Menu_Option7": "7. Clear all jobs",
   "Menu_Option8": "8. Configure encryption extensions",
   "Menu_Option9": "9. Configure business software",
-  "Menu_Option10": "10. Configure Log's' target destination"
+  "Menu_Option10": "10. Configure Log's' target destination",
   "Menu_Quit": "q. Quit",
 
+  "Lang_Menu_Title": "--- Language Selection ---",
+  "Lang_Option_En": "1. English",
+  "Lang_Option_Fr": "2. French",
   "Lang_Back": "b. Back",
+  "Lang_Confirm_En": "Language changed to English!",
+  "Lang_Confirm_Fr": "Language changed to French!",
+  
+  "Ext_Menu_Title": "--- Encryption Extensions Management ---",
+  "Ext_Option_Add": "1. Add an extension",
+  "Ext_Option_Clear": "2. Clear the list",
+  "Soft_Menu_Title": "--- Business Software Management ---",
+  "Soft_Option_Update": "1. Update software",
+  "Soft_Option_Delete": "2. Delete current software",
+  "Action_Success": "Operation successful!",
+  "Current_Extensions": "Current extensions: {0}",
+  "No_Extensions": "No extensions configured.",
+  "Current_Software": "Current business software: {0}",
+  "No_Software": "No business software configured.",
+  "Manage_Instructions_Ext": "Enter an extension to add or remove (e.g. .pdf):",
+  "Manage_Instructions_Soft": "Enter software name (e.g. Calculator):",
+
 
   "Job_List_Title": "--- Jobs List ---",
   "Job_List_Empty": "No jobs configured.",
