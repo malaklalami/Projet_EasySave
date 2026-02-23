@@ -14,6 +14,7 @@ public class BackupService
     private readonly CryptoService _crypto;
     private readonly BusinessSoftwareMonitor _monitor;
 
+    private static readonly SemaphoreSlim _largeFileSemaphore = new(1, 1);
     private static CancellationTokenSource _cts = new();
 
     public BackupService(ConfigService config, CryptoService crypto)
@@ -70,7 +71,7 @@ public class BackupService
             var options = new ParallelOptions
             {
                 MaxDegreeOfParallelism = _config.Current.MaxParallelFiles, // Nombre de threads
-                
+
             };
 
             // ancienne logique de sauvegarde fichier après fichier
@@ -87,54 +88,67 @@ public class BackupService
                 Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
                 FileInfo fi = new FileInfo(currentFilePath);
 
-                var sw = Stopwatch.StartNew();
+                // C. La règle des n Ko (Bande passante)
+                bool isLarge = fi.Length > _config.Current.LargeFileThreshold;
+                if (isLarge) await _largeFileSemaphore.WaitAsync(ct);
 
-                //ancienne logique 
-                ///File.Copy(files[i], dest, true);
-                ///
-
-
-                // On utilise Task.Run pour que la copie physique ne bloque pas le thread
-                await Task.Run(() => File.Copy(currentFilePath, dest, true), ct);
-
-                long cryptTime = _config.Current.EncryptionExtensions.Contains(Path.GetExtension(dest).ToLower())
-                    ? _crypto.Encrypt(dest)
-                    : 0;
-
-                sw.Stop();
-
-                var entry = new LogEntry
+                try
                 {
-                    JobName = currentJob.Name,
-                    Source = currentFilePath,
-                    Target = dest,
-                    FileSize = fi.Length,
-                    TransferTimeMs = sw.ElapsedMilliseconds,
-                    EncryptionTimeMs = cryptTime
-                };
 
-                // --- STRATÉGIE DE LOGGING  ---
+                    var sw = Stopwatch.StartNew();
 
-                // A. LOG LOCAL : Uniquement si Local ou Both
-                if (strategy == LogTarget.Local || strategy == LogTarget.Both)
-                {
-                    _logger.Write(entry, _config.Current.LogFormat == LogFormat.Json);
+                    //ancienne logique 
+                    ///File.Copy(files[i], dest, true);
+                    ///
+
+
+                    // On utilise Task.Run pour que la copie physique ne bloque pas le thread
+                    await Task.Run(() => File.Copy(currentFilePath, dest, true), ct);
+
+                    long cryptTime = _config.Current.EncryptionExtensions.Contains(Path.GetExtension(dest).ToLower())
+                        ? _crypto.Encrypt(dest)
+                        : 0;
+
+                    sw.Stop();
+
+                    var entry = new LogEntry
+                    {
+                        JobName = currentJob.Name,
+                        Source = currentFilePath,
+                        Target = dest,
+                        FileSize = fi.Length,
+                        TransferTimeMs = sw.ElapsedMilliseconds,
+                        EncryptionTimeMs = cryptTime
+                    };
+
+                    // --- STRATÉGIE DE LOGGING  ---
+
+                    // A. LOG LOCAL : Uniquement si Local ou Both
+                    if (strategy == LogTarget.Local || strategy == LogTarget.Both)
+                    {
+                        _logger.Write(entry, _config.Current.LogFormat == LogFormat.Json);
+                    }
+
+                    // B. LOG DISTANT : Uniquement si Remote ou Both
+                    if (strategy == LogTarget.Remote || strategy == LogTarget.Both)
+                    {
+                        tcpLogger?.SendLog(entry);
+                    }
+
+                    int current = Interlocked.Increment(ref processedCount);
+                    onProgress?.Invoke(new BackupState
+                    {
+                        JobName = currentJob.Name,
+                        Status = JobState.Active,
+                        Progress = sortedTasks.Count > 0 ? (double)current / sortedTasks.Count * 100 : 100,
+                        CurrentFile = Path.GetFileName(currentFilePath)
+                    });
+
                 }
-
-                // B. LOG DISTANT : Uniquement si Remote ou Both
-                if (strategy == LogTarget.Remote || strategy == LogTarget.Both)
+                finally
                 {
-                    tcpLogger?.SendLog(entry);
+                    if (isLarge) _largeFileSemaphore.Release();
                 }
-
-                int current = Interlocked.Increment(ref processedCount);
-                onProgress?.Invoke(new BackupState
-                {
-                    JobName = currentJob.Name,
-                    Status = JobState.Active,
-                    Progress = sortedTasks.Count > 0 ? (double)current / sortedTasks.Count * 100 : 100,
-                    CurrentFile = Path.GetFileName(currentFilePath)
-                });
             });
         }
         finally

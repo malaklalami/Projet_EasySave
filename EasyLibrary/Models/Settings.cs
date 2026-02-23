@@ -17,6 +17,7 @@ public class Settings
 
     // Nombre maximum de fichiers traités en parallèle
     public int MaxParallelFiles { get; set; } = 4;
+    public long LargeFileThreshold { get; set; } = 100 * 1024; // Par défaut 100 Ko
 }
 
 //Stocke la langue, le format des logs, le nom du logiciel métier et les extensions à chiffrer
