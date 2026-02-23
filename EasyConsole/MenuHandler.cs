@@ -26,6 +26,7 @@ public class MenuHandler
         return (action, target);
     }
 
+
     public void Run()
     {
         bool exit = false;
@@ -58,16 +59,23 @@ public class MenuHandler
                 case "pause":
                     if (target == "all") _vm.PauseAllJobs();
                     else _vm.PauseJob(target);
+                    // On affiche la confirmation ici
+                    Console.WriteLine($"\n>>> [OK] {_vm.Language.Get("Job_Paused")} : {target}");
+                    Thread.Sleep(1000); // On fait une petite pause pour avoir le temps de lire avant le Clear()
                     break;
 
                 case "resume":
                     if (target == "all") _vm.ResumeAllJobs();
                     else _vm.ResumeJob(target);
+                    Console.WriteLine($"\n>>> [OK] {_vm.Language.Get("Job_Resumed")} : {target}");
+                    Thread.Sleep(1000);
                     break;
 
                 case "stop":
                     if (target == "all") _vm.StopAllJobs();
                     else _vm.StopJob(target);
+                    Console.WriteLine($"\n>>> [OK] {_vm.Language.Get("Job_Stopped")} : {target}");
+                    Thread.Sleep(1000);
                     break;
 
                 case "q": exit = true; break;
