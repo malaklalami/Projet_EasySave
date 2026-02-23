@@ -44,14 +44,41 @@ public class JobUI
     public void ExecuteSelection()
     {
         Console.WriteLine($"\n{_vm.Language.Get("Run_Title")}");
-
         Console.Write(_vm.Language.Get("Run_Input"));
         string input = Console.ReadLine() ?? "";
 
-        // On lance l'exécution via le contrôleur
-        _vm.Execute(input);
+        // On lance la tâche en arrière-plan
+        Task.Run(async () =>
+        {
+            await _vm.Execute(input);
 
-        Console.WriteLine(_vm.Language.Get("Run_Finished"));
+            Console.WriteLine($"\n>{_vm.Language.Get("Run_Finished")}");
+            Console.Write("\n> "); // On réaffiche le prompt pour le menu
+        });
+
+    }
+
+    public void ControlJob(string action, string target)
+    {
+        if (target == "all")
+        {
+            if (action == "pause") _vm.PauseAllJobs();
+            else if (action == "resume") _vm.ResumeAllJobs();
+            else if (action == "stop") _vm.StopAllJobs();
+
+            Console.WriteLine($"\n[OK] {_vm.Language.Get("All_Jobs_Label")} : {action}");
+        }
+        else
+        {
+            // On appelle le VM pour l'action technique
+            if (action == "pause") _vm.PauseJob(target);
+            else if (action == "resume") _vm.ResumeJob(target);
+            else if (action == "stop") _vm.StopJob(target);
+
+            // On affiche la confirmation ici !
+            string statusKey = action == "pause" ? "Job_Paused" : (action == "resume" ? "Job_Resumed" : "Job_Stopped");
+            Console.WriteLine($"\n[OK] {_vm.Language.Get(statusKey)}: {target}");
+        }
     }
 
     public void DeleteJob()

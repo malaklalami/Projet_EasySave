@@ -10,6 +10,9 @@
   "Menu_Option8": "8. Configurer les extensions à chiffrer",
   "Menu_Option9": "9. Configurer le logiciel métier",
   "Menu_Option10": "10. Configurer endroit cible des logs",
+  "Menu_Option_Pause": "PAUSE  : Tapez 'pause' pour (tous) ou 'pause [n°]' (ex: pause 1)",
+  "Menu_Option_Resume": "RESUME : Tapez 'resume' pour (tous) ou 'resume [n°]'",
+  "Menu_Option_Stop": "STOP   : Tapez 'stop' pour (tous) ou 'stop [n°]'",
   "Menu_Quit": "q. Quitter",
 
   "Lang_Menu_Title": "--- Choix de la Langue ---",
@@ -58,12 +61,25 @@
 
   "Run_Title": "--- Lancer une sauvegarde ---",
   "Run_Input": "Entrez le(s) numéro(s) (ex: 1, 0-3, 1;3) : ",
-  "Run_Finished": "Exécution terminée.",
+  "Run_Finished": "Succès : Exécution terminée.",
+  "Run_Started": "Démarrage des travaux...",
 
   "Success_Finished": "Succès : {0} terminé.",
   "Error_SourceNotFound": "[ERREUR] Le dossier source n'existe pas : {0}",
   "Error_Global": "[ERREUR] Impossible d'exécuter {0}. Chemin invalide ou zone protégée.",
   "Msg_LangChanged": "Langue changée !",
   "Msg_LogFormatChanged": "Format des logs changé : ",
-  "Msg_AllJobsDeleted": ">>>> Tous les travaux ont été supprimés."
+  "Msg_AllJobsDeleted": ">>>> Tous les travaux ont été supprimés.",
+
+  "Software_Detected": "[MONITOR] Logiciel métier détecté ! Pause automatique...",
+  "Software_Closed": "[MONITOR] Logiciel métier fermé. Reprise de la sauvegarde...",
+  "Status_Waiting": "[EN ATTENTE - Gros fichier]",
+  "Status_Paused": "[PAUSE] La sauvegarde est arrêtée temporairement.",
+  "Status_Resumed": "[REPRISE] La sauvegarde redémarre.",
+  "Job_Paused": "Travail mis en pause",
+  "Job_Resumed": "Travail repris",
+  "Job_Stopped": "Travail arrêté",
+  "All_Jobs_Paused": "Tous les travaux ont été mis en pause.",
+  "All_Jobs_Resumed": "Tous les travaux ont été repris.",
+  "All_Jobs_Stopped": "Tous les travaux ont été arrêtés."
 }

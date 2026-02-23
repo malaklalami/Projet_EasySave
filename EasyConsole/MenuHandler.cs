@@ -15,6 +15,17 @@ public class MenuHandler
         _jobUI = new JobUI(vm);
     }
 
+    public static (string Action, string Target) ParseControlCommand(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return ("", "");
+
+        var parts = input.Trim().Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+        string action = parts[0].ToLower();
+        string target = parts.Length > 1 ? parts[1] : "all";
+
+        return (action, target);
+    }
+
     public void Run()
     {
         bool exit = false;
@@ -25,7 +36,8 @@ public class MenuHandler
             ShowMenu();
             Console.Write("\n> ");
             string choice = Console.ReadLine() ?? "";
-            switch (choice)
+            var (action, target) = ParseControlCommand(choice);
+            switch (action)
             {
                 case "1": _jobUI.CreateJob(); break;
                 case "2": _jobUI.ExecuteSelection(); break;
@@ -42,6 +54,20 @@ public class MenuHandler
 
                 case "10":
                     SettingsUI.LogDestination(_vm);
+                    break;
+                case "pause":
+                    if (target == "all") _vm.PauseAllJobs();
+                    else _vm.PauseJob(target);
+                    break;
+
+                case "resume":
+                    if (target == "all") _vm.ResumeAllJobs();
+                    else _vm.ResumeJob(target);
+                    break;
+
+                case "stop":
+                    if (target == "all") _vm.StopAllJobs();
+                    else _vm.StopJob(target);
                     break;
 
                 case "q": exit = true; break;
@@ -205,6 +231,9 @@ public class MenuHandler
         Console.WriteLine($"{_vm.Language.Get("Menu_Option8")} [ {(_vm.Settings.EncryptionExtensions.Any() ? string.Join(", ", _vm.Settings.EncryptionExtensions) : _vm.Language.Get("No_Extensions"))} ]");
         Console.WriteLine($"{_vm.Language.Get("Menu_Option9")} [ {(!string.IsNullOrEmpty(_vm.Settings.BusinessSoftware) ? _vm.Settings.BusinessSoftware : _vm.Language.Get("No_Software"))} ]");
         Console.WriteLine(_vm.Language.Get("Menu_Option10"));
+        Console.WriteLine(_vm.Language.Get("Menu_Option_Pause"));
+        Console.WriteLine(_vm.Language.Get("Menu_Option_Resume"));
+        Console.WriteLine(_vm.Language.Get("Menu_Option_Stop"));
         Console.WriteLine(_vm.Language.Get("Menu_Quit"));
 
     }

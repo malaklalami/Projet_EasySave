@@ -15,6 +15,10 @@ public class BackupService
     private readonly BusinessSoftwareMonitor _monitor;
 
     private static readonly SemaphoreSlim _largeFileSemaphore = new(1, 1);
+
+    // Pour mettre en pause (true = ça passe, false = on bloque)
+    private static ManualResetEventSlim _pauseEvent = new(true);
+    // Pour arrêter définitivement (le token qu'on passe à File.Copy)
     private static CancellationTokenSource _cts = new();
 
     public BackupService(ConfigService config, CryptoService crypto)
@@ -24,9 +28,19 @@ public class BackupService
         _monitor = new BusinessSoftwareMonitor(_config, _logger);
     }
 
+    public void PauseAll() => _pauseEvent.Reset();  // Met tout en pause
+    public void ResumeAll() => _pauseEvent.Set();   // Reprend tout
+    public void StopAll() => _cts.Cancel();         // Annule tout
+
+    public void PauseJob(BackupJob job) => job.PauseEvent.Reset();
+    public void ResumeJob(BackupJob job) => job.PauseEvent.Set();
+    public void StopJob(BackupJob job) => job.JobCts.Cancel();
 
     public async Task Execute(List<BackupJob> jobs, Action<BackupState> onProgress)
     {
+        //Reinitilisation : si on veut relancer une sauvegarde après un stop
+        if (_cts.IsCancellationRequested) _cts = new CancellationTokenSource();
+
         // On récupère la stratégie choisie par l'utilisateur (Local, Remote, Both)
         // Note : LogTarget est une Enum (0: Local, 1: Remote, 2: Both)
         var strategy = _config.Current.LogStrategy;
@@ -80,8 +94,18 @@ public class BackupService
             //nouvelle logique en utilisant le parallélisme
             await Parallel.ForEachAsync(sortedTasks, options, async (task, ct) =>
             {
+                // 1. Vérification du STOP (avant de commencer le fichier)
+                if (_cts.Token.IsCancellationRequested) return;
+
                 string currentFilePath = task.FilePath;
                 BackupJob currentJob = task.Job;
+                currentJob.PauseEvent.Wait();
+
+                // 2. Vérification de la pause globale
+                // Si _pauseEvent est sur Reset, tous les threads s'arrêtent ici et attendent
+                _pauseEvent.Wait();
+
+
                 _monitor.CheckActivity(currentJob.Name, onProgress);
 
                 string dest = currentFilePath.Replace(currentJob.SourceDir, currentJob.TargetDir);
@@ -90,7 +114,18 @@ public class BackupService
 
                 // C. La règle des n Ko (Bande passante)
                 bool isLarge = fi.Length > _config.Current.LargeFileThreshold;
-                if (isLarge) await _largeFileSemaphore.WaitAsync(ct);
+                if (isLarge)
+                {
+                    // On envoie un signal "Attente" avant de bloquer
+                    onProgress?.Invoke(new BackupState
+                    {
+                        JobName = currentJob.Name,
+                        Status = JobState.Waiting,
+                        CurrentFile = Path.GetFileName(currentFilePath)
+                    });
+
+                    await _largeFileSemaphore.WaitAsync(_cts.Token);// Le thread s'arrête ici tant qu'un autre gros fichier n'a pas fini
+                }
 
                 try
                 {
@@ -103,7 +138,7 @@ public class BackupService
 
 
                     // On utilise Task.Run pour que la copie physique ne bloque pas le thread
-                    await Task.Run(() => File.Copy(currentFilePath, dest, true), ct);
+                    await Task.Run(() => File.Copy(currentFilePath, dest, true), _cts.Token);
 
                     long cryptTime = _config.Current.EncryptionExtensions.Contains(Path.GetExtension(dest).ToLower())
                         ? _crypto.Encrypt(dest)
@@ -144,6 +179,13 @@ public class BackupService
                         CurrentFile = Path.GetFileName(currentFilePath)
                     });
 
+                }
+                
+                catch (OperationCanceledException)
+                {
+                    // L'utilisateur a appuyé sur STOP. 
+                    // On sort de la boucle pour ce fichier.
+                    return;
                 }
                 finally
                 {

@@ -6,6 +6,7 @@ using System.Threading.Tasks; // Ajouté pour le Task
 using EasySave.Models;
 using EasySave.Services;
 using EasySave.Core;
+using static System.Reflection.Metadata.BlobBuilder;
 
 namespace EasyLibrary.ViewModels;
 
@@ -15,6 +16,8 @@ public class MainViewModel
     private readonly JobManager _manager = new();
     private readonly BackupService _backup;
     private readonly BusinessSoftwareWatcher _watcher;
+
+    public Action<string>? DisplayMessage { get; set; }
 
     public LanguageService Language { get; } = new();
 
@@ -39,14 +42,39 @@ public class MainViewModel
     {
         _watcher.OnSoftwareDetected = () =>
         {
-            _backup.Pause();
+            _backup.PauseAll();
+            DisplayMessage?.Invoke(Language.Get("Software_Detected"));
         };
         _watcher.OnSoftwareClosed = () =>
         {
-            _backup.Resume();
+            _backup.ResumeAll();
+            DisplayMessage?.Invoke(Language.Get("Software_Closed"));
         };
         _watcher.Start();
     }
+
+    public void PauseJob(string jobName)
+    {
+        var job = Jobs.FirstOrDefault(j => j.Name.Equals(jobName, StringComparison.OrdinalIgnoreCase));
+        if (job != null) _backup.PauseJob(job);
+    }
+
+    public void ResumeJob(string jobName)
+    {
+        var job = Jobs.FirstOrDefault(j => j.Name.Equals(jobName, StringComparison.OrdinalIgnoreCase));
+        if (job != null) _backup.ResumeJob(job);
+    }
+
+    public void StopJob(string jobName)
+    {
+        var job = Jobs.FirstOrDefault(j => j.Name.Equals(jobName, StringComparison.OrdinalIgnoreCase));
+        if (job != null) _backup.StopJob(job);
+    }
+
+    // --- MÉTHODES DE PILOTAGE GLOBAL ---
+    public void PauseAllJobs() => _backup.PauseAll();
+    public void ResumeAllJobs() => _backup.ResumeAll();
+    public void StopAllJobs() => _backup.StopAll();
 
     // Méthode appelée par SettingsUI
     public void SaveSettings()

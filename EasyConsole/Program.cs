@@ -11,6 +11,15 @@ class Program
         // Il charge automatiquement les jobs et settings au démarrage grâce à son constructeur.
         MainViewModel viewModel = new MainViewModel();
 
+        // On définit l'action d'affichage pour que le ViewModel puisse "parler" à la console
+        viewModel.DisplayMessage = (msg) =>
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow; // Optionnel : pour que ça ressorte bien
+            Console.WriteLine($"\n[MONITOR] {msg}");
+            Console.ResetColor();
+            Console.Write("> "); // On remet le petit prompt du menu
+        };
+
         // 2. On vérifie s'il y a des arguments (Mode ligne de commande : EasySave.exe 1-3)
         if (args.Length > 0)
         {
