@@ -5,7 +5,7 @@ namespace EasyConsole;
 
 class Program
 {
-    static void Main(string[] args)
+    static async Task Main(string[] args)
     {
         // 1. On crée le contrôleur (MainViewModel)
         // Il charge automatiquement les jobs et settings au démarrage grâce à son constructeur.
@@ -16,7 +16,7 @@ class Program
         {
             Console.WriteLine($"--- Mode Automatique : Exécution de {args[0]} ---");
             // On appelle directement la méthode du contrôleur
-            viewModel.Execute(args[0]);
+            await viewModel.Execute(args[0]);
 
             Console.WriteLine("\n[TERMINÉ] Appuyez sur une touche pour quitter.");
             Console.ReadKey();

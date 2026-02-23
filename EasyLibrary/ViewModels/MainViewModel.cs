@@ -96,13 +96,19 @@ public class MainViewModel
     public async Task Execute(string input)
     {
         var selected = JobParser.ParseSelection(input, Jobs.Count);
-        foreach (var i in selected)
-        {
-            // On ajoute 'await' ici
-            await _backup.Execute(Jobs[i], state => {
+
+        if (!selected.Any()) return;
+
+        var jobsToRun = selected.Select(i => Jobs[i]).ToList();
+
+        //ancienne logique
+        //foreach (var i in selected)
+        //{
+        
+        await _backup.Execute(jobsToRun, state => {
                 // Progression
-            });
-        }
+        });
+        
     }
 
     public void ManageEncryptionExtensions(string extension)

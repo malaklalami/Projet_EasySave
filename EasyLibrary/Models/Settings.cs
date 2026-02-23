@@ -11,6 +11,12 @@ public class Settings
     public List<string> EncryptionExtensions { get; set; } = new();
     public LogTarget LogStrategy { get; set; } = LogTarget.Local; // Par défaut en local
     public string RemoteIp { get; set; } = "127.0.0.1";
+
+    // Liste des extensions prioritaires (ex: .docx, .pdf)
+    public List<string> PriorityExtensions { get; set; } = new() { ".docx", ".xlsx", ".pdf" };
+
+    // Nombre maximum de fichiers traités en parallèle
+    public int MaxParallelFiles { get; set; } = 4;
 }
 
 //Stocke la langue, le format des logs, le nom du logiciel métier et les extensions à chiffrer
