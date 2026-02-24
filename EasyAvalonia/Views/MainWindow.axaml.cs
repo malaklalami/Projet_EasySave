@@ -5,14 +5,30 @@ using EasyLibrary.ViewModels;
 using EasyAvalonia.ViewModels;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Threading.Tasks; // Ajout pour la gestion des Tasks
+using System.Threading.Tasks;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 
 namespace EasyAvalonia.Views;
 
-public partial class MainWindow : Window
+public partial class MainWindow : Window, INotifyPropertyChanged
 {
     public MainViewModel BackendVM { get; set; }
     public ObservableCollection<JobDisplayModel> DisplayJobs { get; set; } = new();
+
+    // Notification pour l'interface graphique
+    public new event PropertyChangedEventHandler? PropertyChanged;
+
+    private bool _isAnyJobRunning;
+    public bool IsAnyJobRunning
+    {
+        get => _isAnyJobRunning;
+        set
+        {
+            _isAnyJobRunning = value;
+            NotifyPropertyChanged(nameof(IsAnyJobRunning));
+        }
+    }
 
     public MainWindow()
     {
@@ -22,6 +38,11 @@ public partial class MainWindow : Window
         DataContext = this;
     }
 
+    private void NotifyPropertyChanged([CallerMemberName] string propertyName = "")
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
     private void RefreshJobList()
     {
         DisplayJobs.Clear();
@@ -29,6 +50,12 @@ public partial class MainWindow : Window
         {
             DisplayJobs.Add(new JobDisplayModel { Job = job });
         }
+    }
+
+    private void UpdateGlobalRunningStatus()
+    {
+        // On vérifie si au moins un travail est en cours d'exécution
+        IsAnyJobRunning = DisplayJobs.Any(j => j.IsRunning);
     }
 
     private async void RunSelected_Click(object sender, RoutedEventArgs e)
@@ -51,7 +78,7 @@ public partial class MainWindow : Window
                 {
                     targetModel.Progress = state.Progress;
 
-                    // Comparaison avec l'Enum JobState de ta librairie
+                    // Comparaison avec l'Enum JobState de la librairie Core
                     targetModel.IsPaused = (state.Status == EasySave.Core.JobState.Paused);
 
                     if (state.Progress < 100 && state.Progress > 0)
@@ -60,10 +87,14 @@ public partial class MainWindow : Window
                         targetModel.CurrentActionText = "✅ Sauvegarde terminée";
 
                     targetModel.Status = state.Status.ToString();
+
+                    // Mise à jour de la visibilité des boutons globaux
+                    UpdateGlobalRunningStatus();
                 }
             });
         };
 
+        // Lancement de l'exécution
         await BackendVM.Execute(inputString);
     }
 
@@ -93,23 +124,23 @@ public partial class MainWindow : Window
 
     // --- GESTION DES TRAVAUX ---
 
-    // CORRECTION : Ajout du mot-clé 'async' ici !
     private async void EditJob_Click(object sender, RoutedEventArgs e)
     {
         var target = DisplayJobs.FirstOrDefault(x => x.IsSelected);
         if (target == null) return;
 
         var dialog = new CreateJobWindow();
-        // On attend l'interaction utilisateur
         await dialog.ShowDialog(this);
 
         if (dialog.IsConfirmed)
         {
             int index = BackendVM.Jobs.IndexOf(target.Job);
-            BackendVM.DeleteJob(index);
-            BackendVM.AddJob(dialog.JobName, dialog.Source, dialog.Target, dialog.Type);
-
-            RefreshJobList();
+            if (index != -1)
+            {
+                BackendVM.DeleteJob(index);
+                BackendVM.AddJob(dialog.JobName, dialog.Source, dialog.Target, dialog.Type);
+                RefreshJobList();
+            }
         }
     }
 
@@ -118,7 +149,6 @@ public partial class MainWindow : Window
         var target = DisplayJobs.FirstOrDefault(x => x.IsSelected);
         if (target != null)
         {
-            // On trouve l'index réel dans la liste du backend
             int index = BackendVM.Jobs.IndexOf(target.Job);
             if (index != -1)
             {

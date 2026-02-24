@@ -14,14 +14,27 @@ public class JobDisplayModel : INotifyPropertyChanged
     public double Progress
     {
         get => _progress;
-        set { _progress = value; OnPropertyChanged(); OnPropertyChanged(nameof(StatusColor)); }
+        set
+        {
+            _progress = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(StatusColor));
+            // Indispensable pour masquer/afficher les boutons en temps réel
+            OnPropertyChanged(nameof(IsRunning));
+        }
     }
 
     private string _status = "En attente";
     public string Status
     {
         get => _status;
-        set { _status = value; OnPropertyChanged(); OnPropertyChanged(nameof(StatusColor)); }
+        set
+        {
+            _status = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(StatusColor));
+            OnPropertyChanged(nameof(IsRunning));
+        }
     }
 
     private string _currentActionText = "";
@@ -35,10 +48,25 @@ public class JobDisplayModel : INotifyPropertyChanged
     public bool IsPaused
     {
         get => _isPaused;
-        set { _isPaused = value; OnPropertyChanged(); }
+        set
+        {
+            _isPaused = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(StatusColor));
+            OnPropertyChanged(nameof(IsRunning));
+        }
     }
 
-    // Propriété magique pour la couleur de la pastille
+    // Propriété pour la visibilité dynamique des boutons
+    public bool IsRunning
+    {
+        get
+        {
+            // Le travail est considéré comme actif s'il a démarré et n'est pas fini
+            return Progress > 0 && Progress < 100;
+        }
+    }
+
     public IBrush StatusColor
     {
         get

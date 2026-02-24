@@ -21,19 +21,24 @@
                         Background="#2D2D30" Foreground="White" FontWeight="Bold" CornerRadius="5" Padding="15,10" VerticalAlignment="Center"/>
             </Grid>
         </Border>
-
-        <Border DockPanel.Dock="Bottom" Background="#252526" Height="80" Padding="20" BorderBrush="#333333" BorderThickness="0,1,0,0">
-            <Grid ColumnDefinitions="Auto, *, Auto">
-                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                    <Button Content="⏸ Pause " Click="PauseAll_Click" Background="#4D4D4D" Foreground="White" FontWeight="Bold" CornerRadius="5"/>
-                    <Button Content="▶ Reprise" Click="ResumeAll_Click" Background="#4D4D4D" Foreground="White" FontWeight="Bold" CornerRadius="5"/>
-                    <Button Content="⏹ Stop" Click="StopAll_Click" Background="#660000" Foreground="White" FontWeight="Bold" CornerRadius="5"/>
-                </StackPanel>
-                
-                <Button Grid.Column="2" Content=" LANCER LA SÉLECTION" Click="RunSelected_Click" 
-                        Background="#007ACC" Foreground="White" FontWeight="Bold" FontSize="16" CornerRadius="5" Padding="20,10" VerticalAlignment="Center"/>
-            </Grid>
-        </Border>
+<Border DockPanel.Dock="Bottom" Background="#252526" Height="80" Padding="20" BorderBrush="#333333" BorderThickness="0,1,0,0">
+    <Grid ColumnDefinitions="Auto, *, Auto">
+        
+        <StackPanel Grid.Column="0" 
+                    Orientation="Horizontal" 
+                    Spacing="10" 
+                    VerticalAlignment="Center"
+                    IsVisible="{Binding IsAnyJobRunning}"> 
+            
+            <Button Content="⏸ Pause" Click="PauseAll_Click" Background="#4D4D4D" Foreground="White" FontWeight="Bold" CornerRadius="5"/>
+            <Button Content="▶ Reprise" Click="ResumeAll_Click" Background="#4D4D4D" Foreground="White" FontWeight="Bold" CornerRadius="5"/>
+            <Button Content="⏹ Stop" Click="StopAll_Click" Background="#660000" Foreground="White" FontWeight="Bold" CornerRadius="5"/>
+        </StackPanel>
+        
+        <Button Grid.Column="2" Content="🚀 LANCER LA SÉLECTION" Click="RunSelected_Click" 
+                Background="#007ACC" Foreground="White" FontWeight="Bold" FontSize="16" CornerRadius="5" Padding="20,10" VerticalAlignment="Center"/>
+    </Grid>
+</Border>
 
         <Border DockPanel.Dock="Left" Width="250" Background="#252526" BorderBrush="#333333" BorderThickness="0,0,1,0" Padding="15">
             <StackPanel Spacing="15">
@@ -76,11 +81,24 @@
                     <TextBlock Text="{Binding Status}" Foreground="#AAAAAA" FontSize="12" VerticalAlignment="Center" Margin="5,0"/>
                 </StackPanel>
 
-                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="5">
-                    <Button Content="⏸" Click="PauseJob_Click" Background="#3E3E42" IsVisible="{Binding !IsPaused}"/>
-                    <Button Content="▶" Click="ResumeJob_Click" Background="#007ACC" IsVisible="{Binding IsPaused}"/>
-                    <Button Content="⏹" Click="StopJob_Click" Background="#660000"/>
-                </StackPanel>
+              <StackPanel Grid.Column="3" 
+            Orientation="Horizontal" 
+            Spacing="5" 
+            VerticalAlignment="Center"
+            IsVisible="{Binding IsRunning}"> <Button Content="⏸" 
+            Click="PauseJob_Click" 
+            Background="#3E3E42" 
+            IsVisible="{Binding !IsPaused}"/>
+    
+    <Button Content="▶" 
+            Click="ResumeJob_Click" 
+            Background="#007ACC" 
+            IsVisible="{Binding IsPaused}"/>
+    
+    <Button Content="⏹" 
+            Click="StopJob_Click" 
+            Background="#660000"/>
+</StackPanel>
 
                 <StackPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="20,5,0,0">
                     <TextBlock Text="{Binding CurrentActionText}" FontSize="11" Foreground="#007ACC" FontWeight="SemiBold"/>
