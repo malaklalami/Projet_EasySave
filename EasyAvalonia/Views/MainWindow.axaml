@@ -12,7 +12,7 @@
             <Grid ColumnDefinitions="Auto, *, Auto">
                 
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
-                    <TextBlock Text="💾" FontSize="32" VerticalAlignment="Center"/>
+                   
                     <TextBlock Text="EasySave" FontSize="28" FontWeight="ExtraBold" Foreground="White" VerticalAlignment="Center"/>
                     <TextBlock Text="V3.0" FontSize="14" Foreground="#007ACC" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
                 </StackPanel>
