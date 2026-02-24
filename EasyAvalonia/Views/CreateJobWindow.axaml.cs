@@ -1,6 +1,6 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Platform.Storage; // Indispensable pour la sélection de dossiers
+using Avalonia.Platform.Storage;
 using EasySave.Core;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -20,17 +20,17 @@ public partial class CreateJobWindow : Window
         InitializeComponent();
     }
 
+    // Cette méthode permet de pré-remplir les champs lors d'une modification
     public void LoadJobData(string name, string source, string target, BackupType type)
     {
-        // On remplit les champs de texte de la popup avec les infos reçues
         NameInput.Text = name;
         SourceInput.Text = source;
         TargetInput.Text = target;
 
-        // On sélectionne le bon type dans la liste déroulante
-        // On suppose : 0 = Complet, 1 = Différentiel
+        // 0 = Complet (Full), 1 = Différentiel
         TypeCombo.SelectedIndex = (type == BackupType.Full) ? 0 : 1;
     }
+
     private async void SelectSource_Click(object sender, RoutedEventArgs e)
     {
         var folder = await SelectFolder();
@@ -45,7 +45,6 @@ public partial class CreateJobWindow : Window
 
     private async Task<string?> SelectFolder()
     {
-        // Nouvelle méthode Avalonia pour choisir un dossier
         var folders = await this.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
             Title = "Choisir un répertoire",

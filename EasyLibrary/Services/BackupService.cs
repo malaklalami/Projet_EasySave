@@ -37,6 +37,20 @@ public class BackupService
     public void PauseJob(BackupJob job) => job.PauseEvent.Reset();
     public void ResumeJob(BackupJob job) => job.PauseEvent.Set();
     public void StopJob(BackupJob job) => job.JobCts.Cancel();
+    public void UpdateJobInList(List<BackupJob> jobs, int index, string n, string s, string t, BackupType ty)
+    {
+        if (index >= 0 && index < jobs.Count)
+        {
+            var job = jobs[index];
+            job.Name = n;
+            job.SourceDir = s;
+            job.TargetDir = t;
+            job.Type = ty;
+
+            // Ici, on pourrait aussi réinitialiser les événements de pause si nécessaire
+            job.PauseEvent.Set();
+        }
+    }
 
     public async Task Execute(List<BackupJob> jobs, Action<BackupState> onProgress)
     {
@@ -131,6 +145,7 @@ public class BackupService
                         task.Job.PauseEvent.Wait();
                     }
                 }
+
 
                 // C. La règle des n Ko (Bande passante)
                 bool isLarge = fi.Length > _config.Current.LargeFileThreshold;

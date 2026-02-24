@@ -156,8 +156,19 @@ public class MainViewModel
         _config.Save();
     }
 
+    public void UpdateJob(int index, string n, string s, string t, BackupType ty)
+    {
+        // 1. On demande au service de modifier l'objet dans la liste
+        _backup.UpdateJobInList(Jobs.ToList(), index, n, s, t, ty);
 
-   
+        // 2. On force la mise à jour visuelle (au cas où)
+        var updatedJob = Jobs[index];
+        // Optionnel : on peut notifier ici si nécessaire
+
+        // 3. On enregistre les modifications dans le fichier JSON
+        _manager.Save(Jobs.ToList());
+    }
+
 
     public async Task Execute(string input)
     {
