@@ -130,15 +130,23 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (target == null) return;
 
         var dialog = new CreateJobWindow();
+
+        // Utilisation des bons noms : SourceDir et TargetDir
+        dialog.LoadJobData(target.Job.Name, target.Job.SourceDir, target.Job.TargetDir, target.Job.Type);
+
         await dialog.ShowDialog(this);
 
         if (dialog.IsConfirmed)
         {
+            // 4. PERSISTANCE : On remplace l'ancien par le nouveau dans la librairie
             int index = BackendVM.Jobs.IndexOf(target.Job);
             if (index != -1)
             {
+                // On supprime l'ancien et on ajoute le nouveau avec les modifs
                 BackendVM.DeleteJob(index);
                 BackendVM.AddJob(dialog.JobName, dialog.Source, dialog.Target, dialog.Type);
+
+                // On sauvegarde et on rafraîchit
                 RefreshJobList();
             }
         }

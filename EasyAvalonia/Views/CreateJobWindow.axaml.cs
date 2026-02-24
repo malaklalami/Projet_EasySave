@@ -20,6 +20,17 @@ public partial class CreateJobWindow : Window
         InitializeComponent();
     }
 
+    public void LoadJobData(string name, string source, string target, BackupType type)
+    {
+        // On remplit les champs de texte de la popup avec les infos reçues
+        NameInput.Text = name;
+        SourceInput.Text = source;
+        TargetInput.Text = target;
+
+        // On sélectionne le bon type dans la liste déroulante
+        // On suppose : 0 = Complet, 1 = Différentiel
+        TypeCombo.SelectedIndex = (type == BackupType.Full) ? 0 : 1;
+    }
     private async void SelectSource_Click(object sender, RoutedEventArgs e)
     {
         var folder = await SelectFolder();
