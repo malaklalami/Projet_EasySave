@@ -22,7 +22,6 @@
   "Lang_Confirm_En": "Langue changée en Anglais !",
   "Lang_Confirm_Fr": "Langue changée en Français !",
 
-
   "Ext_Menu_Title": "--- Gestion des Extensions (Chiffrement) ---",
   "Ext_Option_Add": "1. Ajouter une extension",
   "Ext_Option_Clear": "2. Vider la liste",
@@ -81,5 +80,10 @@
   "Job_Stopped": "Travail arrêté",
   "All_Jobs_Paused": "Tous les travaux ont été mis en pause.",
   "All_Jobs_Resumed": "Tous les travaux ont été repris.",
-  "All_Jobs_Stopped": "Tous les travaux ont été arrêtés."
+  "All_Jobs_Stopped": "Tous les travaux ont été arrêtés.",
+
+  "Title_Alert": "Alerte Système",
+  "Error_DiskFull": "Espace disque insuffisant sur le lecteur : {0}",
+  "Error_AccessDenied": " Accès refusé pour le fichier : {0}. Vérifiez les permissions.",
+  "Error_Unknown": "Erreur inattendue : {0}"
 }
