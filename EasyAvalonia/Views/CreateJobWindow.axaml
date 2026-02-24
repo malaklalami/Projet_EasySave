@@ -1,0 +1,44 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="EasyAvalonia.Views.CreateJobWindow"
+        Title="Nouveau Travail" Width="450" Height="450"
+        WindowStartupLocation="CenterOwner" Background="#1E1E1E" Foreground="White">
+
+    <StackPanel Margin="20" Spacing="15">
+        <TextBlock Text="CRÉER UN TRAVAIL" FontSize="18" FontWeight="Bold" Foreground="#007ACC"/>
+
+        <StackPanel Spacing="5">
+            <TextBlock Text="Nom du travail :"/>
+            <TextBox Name="NameInput" Background="#2D2D30" Foreground="White"/>
+        </StackPanel>
+
+        <StackPanel Spacing="5">
+            <TextBlock Text="Répertoire Source :"/>
+            <Grid ColumnDefinitions="*, Auto">
+                <TextBox Name="SourceInput" Background="#2D2D30" Foreground="White"/>
+                <Button Grid.Column="1" Content="..." Click="SelectSource_Click" Margin="5,0,0,0"/>
+            </Grid>
+        </StackPanel>
+
+        <StackPanel Spacing="5">
+            <TextBlock Text="Répertoire Cible :"/>
+            <Grid ColumnDefinitions="*, Auto">
+                <TextBox Name="TargetInput" Background="#2D2D30" Foreground="White"/>
+                <Button Grid.Column="1" Content="..." Click="SelectTarget_Click" Margin="5,0,0,0"/>
+            </Grid>
+        </StackPanel>
+
+        <StackPanel Spacing="5">
+            <TextBlock Text="Type de sauvegarde :"/>
+            <ComboBox Name="TypeCombo" Width="200" SelectedIndex="0">
+                <ComboBoxItem Content="Complète (Full)"/>
+                <ComboBoxItem Content="Différentielle"/>
+            </ComboBox>
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,20,0,0">
+            <Button Content="Annuler" Click="Cancel_Click" Background="Transparent"/>
+            <Button Content="Créer" Click="Confirm_Click" Background="#007ACC" FontWeight="Bold"/>
+        </StackPanel>
+    </StackPanel>
+</Window>

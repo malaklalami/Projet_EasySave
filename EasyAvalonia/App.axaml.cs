@@ -1,6 +1,7 @@
-using Avalonia;
+﻿using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using EasyAvalonia.Views; // Dit à l'App où trouver la fenêtre principale
 
 namespace EasyAvalonia;
 
@@ -16,9 +17,7 @@ public partial class App : Avalonia.Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.MainWindow = new MainWindow();
-            //DataContext = new MainViewModel()   is not needed because of the use of the ViewModelLocator in the XAML file, which automatically resolves the MainViewModel for the MainWindow.
         }
-
         base.OnFrameworkInitializationCompleted();
     }
 }

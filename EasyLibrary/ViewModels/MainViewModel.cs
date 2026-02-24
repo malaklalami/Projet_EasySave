@@ -23,7 +23,7 @@ public class MainViewModel
 
     // Propriété utilisée par SettingsUI
     public Settings Settings => _config.Current;
-
+    public Action<BackupState>? OnProgressUpdate { get; set; }
     public ObservableCollection<BackupJob> Jobs { get; }
 
     public MainViewModel()
@@ -120,24 +120,8 @@ public class MainViewModel
         _config.Save();
     }
 
-    // Passé en async Task pour supporter le logger TCP persistant
-    public async Task Execute(string input)
-    {
-        var selected = JobParser.ParseSelection(input, Jobs.Count);
-
-        if (!selected.Any()) return;
-
-        var jobsToRun = selected.Select(i => Jobs[i]).ToList();
-
-        //ancienne logique
-        //foreach (var i in selected)
-        //{
+    
         
-        await _backup.Execute(jobsToRun, state => {
-                // Progression
-        });
-        
-    }
 
     public void ManageEncryptionExtensions(string extension)
     {
@@ -159,4 +143,25 @@ public class MainViewModel
         Settings.BusinessSoftware = name;
         _config.Save();
     }
+
+
+   
+
+    public async Task Execute(string input)
+    {
+        // On transforme le texte en liste de travaux (Étape 1 du BackupService)
+        var selected = JobParser.ParseSelection(input, Jobs.Count);
+        if (!selected.Any()) return;
+        var jobsToRun = selected.Select(i => Jobs[i]).ToList();
+
+        // ON PASSE LE RELAIS AU BACKUPSERVICE !
+        // - On lui donne la liste (jobsToRun)
+        // - On lui donne la fonction pour qu'il nous renvoie l'état en direct
+        await _backup.Execute(jobsToRun, (BackupState state) =>
+        {
+            OnProgressUpdate?.Invoke(state);
+        });
+    }
 } 
+
+
