@@ -5,6 +5,7 @@ using EasyLibrary.ViewModels;
 using EasyAvalonia.ViewModels;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks; // Ajout pour la gestion des Tasks
 
 namespace EasyAvalonia.Views;
 
@@ -33,13 +34,14 @@ public partial class MainWindow : Window
     private async void RunSelected_Click(object sender, RoutedEventArgs e)
     {
         var selectedIndices = DisplayJobs
-            .Select((model, index) => new { model, index })
-            .Where(x => x.model.IsSelected)
-            .Select(x => x.index.ToString());
+             .Select((model, index) => new { model, index })
+             .Where(x => x.model.IsSelected)
+             .Select(x => x.index.ToString());
 
         string inputString = string.Join(";", selectedIndices);
         if (string.IsNullOrEmpty(inputString)) return;
 
+        // Configuration du retour visuel vers l'interface
         BackendVM.OnProgressUpdate = (state) =>
         {
             Dispatcher.UIThread.Post(() =>
@@ -48,7 +50,16 @@ public partial class MainWindow : Window
                 if (targetModel != null)
                 {
                     targetModel.Progress = state.Progress;
-                    targetModel.Status = $"[{state.Status}] {state.CurrentFile}";
+
+                    // Comparaison avec l'Enum JobState de ta librairie
+                    targetModel.IsPaused = (state.Status == EasySave.Core.JobState.Paused);
+
+                    if (state.Progress < 100 && state.Progress > 0)
+                        targetModel.CurrentActionText = $"⚡ Copie en cours : {state.CurrentFile}";
+                    else if (state.Progress >= 100)
+                        targetModel.CurrentActionText = "✅ Sauvegarde terminée";
+
+                    targetModel.Status = state.Status.ToString();
                 }
             });
         };
@@ -61,7 +72,7 @@ public partial class MainWindow : Window
     private void ResumeAll_Click(object sender, RoutedEventArgs e) => BackendVM.ResumeAllJobs();
     private void StopAll_Click(object sender, RoutedEventArgs e) => BackendVM.StopAllJobs();
 
-    // --- CONTRÔLES INDIVIDUELS (Corrigés pour la liste) ---
+    // --- CONTRÔLES INDIVIDUELS ---
     private void PauseJob_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button btn && btn.DataContext is JobDisplayModel model)
@@ -81,17 +92,39 @@ public partial class MainWindow : Window
     }
 
     // --- GESTION DES TRAVAUX ---
- 
 
-    private void EditJob_Click(object sender, RoutedEventArgs e) { }
+    // CORRECTION : Ajout du mot-clé 'async' ici !
+    private async void EditJob_Click(object sender, RoutedEventArgs e)
+    {
+        var target = DisplayJobs.FirstOrDefault(x => x.IsSelected);
+        if (target == null) return;
+
+        var dialog = new CreateJobWindow();
+        // On attend l'interaction utilisateur
+        await dialog.ShowDialog(this);
+
+        if (dialog.IsConfirmed)
+        {
+            int index = BackendVM.Jobs.IndexOf(target.Job);
+            BackendVM.DeleteJob(index);
+            BackendVM.AddJob(dialog.JobName, dialog.Source, dialog.Target, dialog.Type);
+
+            RefreshJobList();
+        }
+    }
 
     private void DeleteJob_Click(object sender, RoutedEventArgs e)
     {
-        var target = DisplayJobs.Select((model, index) => new { model, index }).FirstOrDefault(x => x.model.IsSelected);
+        var target = DisplayJobs.FirstOrDefault(x => x.IsSelected);
         if (target != null)
         {
-            BackendVM.DeleteJob(target.index);
-            RefreshJobList();
+            // On trouve l'index réel dans la liste du backend
+            int index = BackendVM.Jobs.IndexOf(target.Job);
+            if (index != -1)
+            {
+                BackendVM.DeleteJob(index);
+                RefreshJobList();
+            }
         }
     }
 
@@ -106,6 +139,7 @@ public partial class MainWindow : Window
         var settingsWindow = new SettingsWindow(BackendVM);
         await settingsWindow.ShowDialog(this);
     }
+
     private async void CreateJob_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new CreateJobWindow();
@@ -113,10 +147,7 @@ public partial class MainWindow : Window
 
         if (dialog.IsConfirmed)
         {
-            // On utilise les vraies données saisies !
             BackendVM.AddJob(dialog.JobName, dialog.Source, dialog.Target, dialog.Type);
-
-            // On rafraîchit la liste visuelle
             RefreshJobList();
         }
     }

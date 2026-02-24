@@ -53,27 +53,42 @@
             <TextBlock Grid.Row="0" Text="Sélectionnez les travaux à lancer :" FontSize="18" FontWeight="Bold" Foreground="#D4D4D4" Margin="0,0,0,15"/>
             
             <ListBox Grid.Row="1" ItemsSource="{Binding DisplayJobs}" Background="Transparent" BorderThickness="0">
-                <ListBox.ItemTemplate>
-                    <DataTemplate x:DataType="vm:JobDisplayModel">
-                        
-                        <Border Background="#2D2D30" CornerRadius="8" Padding="15" Margin="0,0,0,10" BoxShadow="0 2 4 0 #40000000">
-                            <Grid ColumnDefinitions="180, *, 200, Auto">
-                                
-                                <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}" Content="{Binding Job.Name}" Foreground="White" FontWeight="Bold" FontSize="16"/>
-                                
-                                <ProgressBar Grid.Column="1" Value="{Binding Progress}" Minimum="0" Maximum="100" Height="20" Margin="20,0" Foreground="#007ACC" Background="#1E1E1E"/>
-                                
-                                <TextBlock Grid.Column="2" Text="{Binding Status}" VerticalAlignment="Center" Foreground="#AAAAAA" TextTrimming="CharacterEllipsis" Margin="10,0"/>
-                                
-                                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="5">
-                                    <Button Content="⏸" Click="PauseJob_Click" ToolTip.Tip="Pause" Background="#3E3E42" Foreground="White"/>
-                                    <Button Content="▶" Click="ResumeJob_Click" ToolTip.Tip="Reprise" Background="#3E3E42" Foreground="White"/>
-                                    <Button Content="⏹" Click="StopJob_Click" ToolTip.Tip="Stop" Background="#660000" Foreground="White"/>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
+             <ListBox.ItemTemplate>
+    <DataTemplate x:DataType="vm:JobDisplayModel">
+        <Border CornerRadius="8" Padding="15" Margin="0,0,0,10" 
+                BoxShadow="0 2 4 0 #40000000">
+            <Border.Background>
+                <Binding Path="Status" ConverterParameter="background">
+                    <Binding.FallbackValue>#2D2D30</Binding.FallbackValue>
+                </Binding>
+            </Border.Background>
+
+            <Grid RowDefinitions="Auto, Auto" ColumnDefinitions="180, *, 200, Auto">
+                
+                <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}" 
+                          Content="{Binding Job.Name}" Foreground="White" FontWeight="Bold"/>
+                
+                <ProgressBar Grid.Column="1" Value="{Binding Progress}" Minimum="0" Maximum="100" 
+                             Height="15" Margin="20,0" Foreground="#007ACC" Background="#1E1E1E"/>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                    <Ellipse Width="10" Height="10" Fill="{Binding StatusColor}"/>
+                    <TextBlock Text="{Binding Status}" Foreground="#AAAAAA" FontSize="12" VerticalAlignment="Center" Margin="5,0"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="5">
+                    <Button Content="⏸" Click="PauseJob_Click" Background="#3E3E42" IsVisible="{Binding !IsPaused}"/>
+                    <Button Content="▶" Click="ResumeJob_Click" Background="#007ACC" IsVisible="{Binding IsPaused}"/>
+                    <Button Content="⏹" Click="StopJob_Click" Background="#660000"/>
+                </StackPanel>
+
+                <StackPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="20,5,0,0">
+                    <TextBlock Text="{Binding CurrentActionText}" FontSize="11" Foreground="#007ACC" FontWeight="SemiBold"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </DataTemplate>
+</ListBox.ItemTemplate>
             </ListBox>
         </Grid>
     </DockPanel>
