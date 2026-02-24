@@ -21,7 +21,7 @@ namespace EasySave.Services
         // --- MÉTHODE ENCRYPT  ---
         public long Encrypt(string file)
         {
-            if (!File.Exists(_path)) return -1;
+            if (!File.Exists(_path)) return -10;
 
             int maxAttempts = 50;
             int currentAttempt = 0;
@@ -35,7 +35,10 @@ namespace EasySave.Services
                         FileName = _path,
                         Arguments = $"\"{file}\" \"{_key}\"",
                         CreateNoWindow = true,
-                        UseShellExecute = false
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true
+
                     };
 
                     using var p = Process.Start(start);
@@ -48,23 +51,23 @@ namespace EasySave.Services
                         return p.ExitCode;
                     }
 
-                    // CAS 2 : Le Mutex est occupé (Code -3 défini dans ton CryptoSoft)
+                    // CAS 2 : Le Mutex est occupé (Code -3 défini dans  CryptoSoft)
                     if (p != null && p.ExitCode == -3)
                     {
                         currentAttempt++;
-                        Thread.Sleep(100); // On attend 100ms avant de retenter
+                        Thread.Sleep(200); // On attend 100ms avant de retenter
                         continue;
                     }
 
-                    return -1; // Autre erreur
+                    return -20; // Autre erreur
                 }
                 catch
                 {
-                    return -2;
+                    return -30;
                 }
             }
 
-            return -1; // Échec après trop de tentatives
+            return -40; // Échec après trop de tentatives
         }
     }
 }

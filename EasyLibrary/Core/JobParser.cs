@@ -12,13 +12,14 @@ public static class JobParser
         var parts = input.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries);
         foreach (var part in parts)
         {
-            if (part.Contains('-'))
+            string cleanPart = part.Trim();
+            if (cleanPart.Contains('-'))
             {
-                var range = part.Split('-');
+                var range = cleanPart.Split('-');
                 if (range.Length == 2 && int.TryParse(range[0], out int s) && int.TryParse(range[1], out int e))
                     for (int i = Math.Min(s, e); i <= Math.Max(s, e); i++) indices.Add(i);
             }
-            else if (int.TryParse(part, out int id)) indices.Add(id);
+            else if (int.TryParse(cleanPart, out int id)) indices.Add(id);
         }
         return indices.Where(i => i >= 0 && i < maxCount).ToList();
     }

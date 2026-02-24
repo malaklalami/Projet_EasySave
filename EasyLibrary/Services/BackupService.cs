@@ -21,6 +21,8 @@ public class BackupService
     // Pour arrêter définitivement (le token qu'on passe à File.Copy)
     private static CancellationTokenSource _cts = new();
 
+    private static int _globalPriorityFilesCount = 0;
+
     public BackupService(ConfigService config, CryptoService crypto)
     {
         _config = config;
@@ -40,6 +42,8 @@ public class BackupService
     {
         //Reinitilisation : si on veut relancer une sauvegarde après un stop
         if (_cts.IsCancellationRequested) _cts = new CancellationTokenSource();
+
+        _pauseEvent.Set();
 
         // On récupère la stratégie choisie par l'utilisateur (Local, Remote, Both)
         // Note : LogTarget est une Enum (0: Local, 1: Remote, 2: Both)
@@ -63,6 +67,10 @@ public class BackupService
 
             foreach (var job in jobs)
             {
+                job.JobCts = new CancellationTokenSource();
+
+                job.PauseEvent.Set();
+
                 _monitor.CheckActivity(job.Name, onProgress, true);
 
                 var files = Directory.GetFiles(job.SourceDir, "*.*", SearchOption.AllDirectories);
@@ -70,6 +78,7 @@ public class BackupService
                 foreach (var f in files)
                 {
                     bool priority = _config.Current.PriorityExtensions.Any(ext => f.EndsWith(ext, StringComparison.OrdinalIgnoreCase));
+                    if (priority) Interlocked.Increment(ref _globalPriorityFilesCount);
                     allTasks.Add((f, job, priority));
                 }
             }
@@ -77,7 +86,7 @@ public class BackupService
             // On trie : d'abord TOUS les prioritaires (peu importe le job), puis le reste
             var sortedTasks = allTasks
                 .OrderByDescending(t => t.IsPriority)
-                .ThenBy(t => t.Job.Name)
+                .ThenBy(t => Guid.NewGuid())// Mélange les fichiers d'une même catégorie pour que tous les Jobs avancent en même temps
                 .ToList();
 
             int processedCount = 0;
@@ -94,23 +103,34 @@ public class BackupService
             //nouvelle logique en utilisant le parallélisme
             await Parallel.ForEachAsync(sortedTasks, options, async (task, ct) =>
             {
-                // 1. Vérification du STOP (avant de commencer le fichier)
+                _pauseEvent.Wait();
+                task.Job.PauseEvent.Wait();
+
+
                 if (_cts.Token.IsCancellationRequested) return;
 
                 string currentFilePath = task.FilePath;
                 BackupJob currentJob = task.Job;
-                currentJob.PauseEvent.Wait();
-
-                // 2. Vérification de la pause globale
-                // Si _pauseEvent est sur Reset, tous les threads s'arrêtent ici et attendent
-                _pauseEvent.Wait();
-
+            
 
                 _monitor.CheckActivity(currentJob.Name, onProgress);
 
                 string dest = currentFilePath.Replace(currentJob.SourceDir, currentJob.TargetDir);
                 Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
                 FileInfo fi = new FileInfo(currentFilePath);
+
+                if (!task.IsPriority) // Si le fichier actuel n'est pas prioritaire
+                {
+                    // On vérifie s'il reste des prioritaires à traiter n'importe où
+                    while (Interlocked.CompareExchange(ref _globalPriorityFilesCount, 0, 0) > 0)
+                    {
+                        await Task.Delay(500); // On attend 0.5s avant de revérifier
+                        if (_cts.Token.IsCancellationRequested) return;
+
+                        _pauseEvent.Wait(); // On vérifie aussi la pause pendant l'attente
+                        task.Job.PauseEvent.Wait();
+                    }
+                }
 
                 // C. La règle des n Ko (Bande passante)
                 bool isLarge = fi.Length > _config.Current.LargeFileThreshold;
@@ -125,6 +145,7 @@ public class BackupService
                     });
 
                     await _largeFileSemaphore.WaitAsync(_cts.Token);// Le thread s'arrête ici tant qu'un autre gros fichier n'a pas fini
+                    _pauseEvent.Wait();
                 }
 
                 try
@@ -139,6 +160,9 @@ public class BackupService
 
                     // On utilise Task.Run pour que la copie physique ne bloque pas le thread
                     await Task.Run(() => File.Copy(currentFilePath, dest, true), _cts.Token);
+
+                    _pauseEvent.Wait();
+                    task.Job.PauseEvent.Wait();
 
                     long cryptTime = _config.Current.EncryptionExtensions.Contains(Path.GetExtension(dest).ToLower())
                         ? _crypto.Encrypt(dest)
@@ -188,7 +212,13 @@ public class BackupService
                     return;
                 }
                 finally
-                {
+                { // Indispensable pour que les fichiers normaux ne restent pas bloqués indéfiniment
+                    if (task.IsPriority)
+                    {
+                        Interlocked.Decrement(ref _globalPriorityFilesCount);
+                    }
+
+                
                     if (isLarge) _largeFileSemaphore.Release();
                 }
             });
