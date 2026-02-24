@@ -18,7 +18,7 @@ public class PersistentTcpLogger : IDisposable
             await _client.ConnectAsync(ip, 11000);
             _writer = new StreamWriter(_client.GetStream(), Encoding.UTF8) { AutoFlush = true };
         }
-        catch { /* Serveur absent : pas grave, on continue */ }
+        catch { /* Serveur absent : pas graveon continue */ }
     }
 
     public void SendLog(LogEntry entry)
