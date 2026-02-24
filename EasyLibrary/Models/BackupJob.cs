@@ -15,7 +15,7 @@ public class BackupJob
     public ManualResetEventSlim PauseEvent { get; } = new(true);
 
     [JsonIgnore]
-    public CancellationTokenSource JobCts { get; } = new();
+    public CancellationTokenSource JobCts { get; set; } = new();
 
 }
 //Contient uniquement les paramètres d'un travail (Nom, Dossier Source, Dossier Cible, Type) c ce qui est stocké dans jobs.json

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Threading.Tasks; // Ajouté pour le Task
+using System.Threading.Tasks;
 using EasySave.Models;
 using EasySave.Services;
 using EasySave.Core;
@@ -32,7 +32,8 @@ public class MainViewModel
         Language.Load(Settings.Language);
         Jobs = new ObservableCollection<BackupJob>(_manager.Load());
 
-        var crypto = new CryptoService("CryptoSoft.exe", "MY_KEY");
+        string cryptoExe = OperatingSystem.IsWindows() ? "CryptoSoft.exe" : "CryptoSoft";
+        var crypto = new CryptoService(cryptoExe, "MY_KEY");
         _backup = new BackupService(_config, crypto);
 
         _watcher = new BusinessSoftwareWatcher(_config);
@@ -53,23 +54,34 @@ public class MainViewModel
         _watcher.Start();
     }
 
-    public void PauseJob(string jobName)
+    private BackupJob? FindJob(string input)
     {
-        var job = Jobs.FirstOrDefault(j => j.Name.Equals(jobName, StringComparison.OrdinalIgnoreCase));
+        if (int.TryParse(input, out int index))
+        {
+            return (index >= 0 && index < Jobs.Count) ? Jobs[index] : null;
+        }
+        return Jobs.FirstOrDefault(j => j.Name.Equals(input, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public void PauseJob(string input)
+    {
+        var job = FindJob(input);
         if (job != null) _backup.PauseJob(job);
     }
 
-    public void ResumeJob(string jobName)
+    public void ResumeJob(string input)
     {
-        var job = Jobs.FirstOrDefault(j => j.Name.Equals(jobName, StringComparison.OrdinalIgnoreCase));
+        var job = FindJob(input);
         if (job != null) _backup.ResumeJob(job);
     }
 
-    public void StopJob(string jobName)
+    public void StopJob(string input)
     {
-        var job = Jobs.FirstOrDefault(j => j.Name.Equals(jobName, StringComparison.OrdinalIgnoreCase));
+        var job = FindJob(input);
         if (job != null) _backup.StopJob(job);
     }
+
+
 
     // --- MÉTHODES DE PILOTAGE GLOBAL ---
     public void PauseAllJobs() => _backup.PauseAll();
