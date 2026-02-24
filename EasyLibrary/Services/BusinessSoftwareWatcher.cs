@@ -30,30 +30,31 @@ public class BusinessSoftwareWatcher
 
         while (_isRunning)
         {
-            string targetApp = _config.Current.BusinessSoftware;
-
-            if (!string.IsNullOrWhiteSpace(targetApp))
+            try
             {
-                // On vérifie si le processus existe (sans .exe)
-                bool isRunningNow = Process.GetProcessesByName(targetApp).Length > 0;
+                string targetApp = _config.Current.BusinessSoftware;
 
-                if (isRunningNow && !wasRunning)
+                if (!string.IsNullOrWhiteSpace(targetApp))
                 {
-                    // LE LOGICIEL VIENT D'OUVRIR -> ON DÉCLENCHE PAUSE()
-                    OnSoftwareDetected?.Invoke();
-                    wasRunning = true;
-                }
-                else if (!isRunningNow && wasRunning)
-                {
-                    // LE LOGICIEL VIENT DE FERMER -> ON DÉCLENCHE RESUME()
-                    OnSoftwareClosed?.Invoke();
-                    wasRunning = false;
+                    bool isRunningNow = Process.GetProcessesByName(targetApp).Length > 0;
+
+                    if (isRunningNow && !wasRunning)
+                    {
+                        wasRunning = true;
+                        // On lance l'alerte dans une tâche séparée (Fire and Forget)
+                        // Comme ça, si l'UI ouvre un popup, cette boucle ne freeze pas.
+                        _ = Task.Run(() => OnSoftwareDetected?.Invoke());
+                    }
+                    else if (!isRunningNow && wasRunning)
+                    {
+                        wasRunning = false;
+                        _ = Task.Run(() => OnSoftwareClosed?.Invoke());
+                    }
                 }
             }
+            catch { /* Sécurité pour éviter de crash la boucle */ }
 
-            await Task.Delay(1000); // On vérifie toutes les secondes
+            await Task.Delay(1000);
         }
     }
-
-    public void Stop() => _isRunning = false;
 }

@@ -4,6 +4,9 @@ using System.Diagnostics;
 using EasySave.Models;
 using EasySave.Core;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 
 namespace EasySave.Services;
 
@@ -15,12 +18,8 @@ public class BackupService
     private readonly BusinessSoftwareMonitor _monitor;
 
     private static readonly SemaphoreSlim _largeFileSemaphore = new(1, 1);
-
-    // Pour mettre en pause (true = ça passe, false = on bloque)
     private static ManualResetEventSlim _pauseEvent = new(true);
-    // Pour arrêter définitivement (le token qu'on passe à File.Copy)
     private static CancellationTokenSource _cts = new();
-
     private static int _globalPriorityFilesCount = 0;
 
     public BackupService(ConfigService config, CryptoService crypto)
@@ -30,13 +29,8 @@ public class BackupService
         _monitor = new BusinessSoftwareMonitor(_config, _logger);
     }
 
-    public void PauseAll() => _pauseEvent.Reset();  // Met tout en pause
-    public void ResumeAll() => _pauseEvent.Set();   // Reprend tout
-    public void StopAll() => _cts.Cancel();         // Annule tout
+    // --- INTERFACE AVEC L'UI (Update, Pause, Stop) ---
 
-    public void PauseJob(BackupJob job) => job.PauseEvent.Reset();
-    public void ResumeJob(BackupJob job) => job.PauseEvent.Set();
-    public void StopJob(BackupJob job) => job.JobCts.Cancel();
     public void UpdateJobInList(List<BackupJob> jobs, int index, string n, string s, string t, BackupType ty)
     {
         if (index >= 0 && index < jobs.Count)
@@ -46,202 +40,179 @@ public class BackupService
             job.SourceDir = s;
             job.TargetDir = t;
             job.Type = ty;
-
-            // Ici, on pourrait aussi réinitialiser les événements de pause si nécessaire
             job.PauseEvent.Set();
         }
     }
 
+    public void PauseAll() => _pauseEvent.Reset();
+    public void ResumeAll() => _pauseEvent.Set();
+    public void StopAll() => _cts.Cancel();
+
+    public void PauseJob(BackupJob job) => job.PauseEvent.Reset();
+    public void ResumeJob(BackupJob job) => job.PauseEvent.Set();
+    public void StopJob(BackupJob job) => job.JobCts.Cancel();
+
+    // --- MÉTHODE PRINCIPALE (L'ORCHESTRATEUR) ---
+
     public async Task Execute(List<BackupJob> jobs, Action<BackupState> onProgress)
     {
-        //Reinitilisation : si on veut relancer une sauvegarde après un stop
         if (_cts.IsCancellationRequested) _cts = new CancellationTokenSource();
-
         _pauseEvent.Set();
 
-        // On récupère la stratégie choisie par l'utilisateur (Local, Remote, Both)
-        // Note : LogTarget est une Enum (0: Local, 1: Remote, 2: Both)
-        var strategy = _config.Current.LogStrategy;
+        using var tcpLogger = await InitializeTcpLogger();
+        var sortedTasks = PrepareTasks(jobs, onProgress);
 
-        // 1. INITIALISATION CONDITIONNELLE DU LOG DISTANT
-        PersistentTcpLogger? tcpLogger = null;
+        int processedCount = 0;
+        var options = new ParallelOptions { MaxDegreeOfParallelism = _config.Current.MaxParallelFiles };
 
-        if (strategy == LogTarget.Remote || strategy == LogTarget.Both)
+        await Parallel.ForEachAsync(sortedTasks, options, async (task, ct) =>
         {
-            tcpLogger = new PersistentTcpLogger();
-            // On utilise l'IP configurée dans les settings
-            await tcpLogger.ConnectAsync(_config.Current.RemoteIp);
-        }
+            await ProcessSingleFile(task, tcpLogger, (fileName) =>
+            {
+                int current = Interlocked.Increment(ref processedCount);
+                onProgress?.Invoke(new BackupState
+                {
+                    JobName = task.Job.Name,
+                    Status = JobState.Active,
+                    Progress = sortedTasks.Count > 0 ? (double)current / sortedTasks.Count * 100 : 100,
+                    CurrentFile = fileName
+                });
+            }, onProgress);
+        });
+    }
+
+    // --- TRAITEMENT INDIVIDUEL DES FICHIERS ---
+
+    private async Task ProcessSingleFile((string FilePath, BackupJob Job, bool IsPriority) task, PersistentTcpLogger? tcpLogger, Action<string> reportProgress, Action<BackupState> onProgress)
+    {
+        _pauseEvent.Wait();
+        task.Job.PauseEvent.Wait();
+        if (_cts.Token.IsCancellationRequested) return;
+
+        _monitor.CheckActivity(task.Job.Name, onProgress);
+
+        string dest = task.FilePath.Replace(task.Job.SourceDir, task.Job.TargetDir);
+        Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
+        FileInfo fi = new FileInfo(task.FilePath);
+
+        bool isLarge = await ApplyConstraints(task, fi, onProgress);
 
         try
         {
-            // --- COLLECTE GLOBALE ---
-            // On crée une liste qui contient TOUS les fichiers de TOUS les jobs sélectionnés
-            var allTasks = new List<(string FilePath, BackupJob Job, bool IsPriority)>();
+            var sw = Stopwatch.StartNew();
 
-            foreach (var job in jobs)
-            {
-                job.JobCts = new CancellationTokenSource();
+            await Task.Run(() => File.Copy(task.FilePath, dest, true), _cts.Token);
 
-                job.PauseEvent.Set();
+            // Appel de la méthode de chiffrement corrigée
+            long cryptTime = ExecuteEncryptionIfRequired(dest);
 
-                _monitor.CheckActivity(job.Name, onProgress, true);
+            sw.Stop();
 
-                var files = Directory.GetFiles(job.SourceDir, "*.*", SearchOption.AllDirectories);
+            LogExecution(task, dest, fi.Length, sw.ElapsedMilliseconds, cryptTime, tcpLogger);
 
-                foreach (var f in files)
-                {
-                    bool priority = _config.Current.PriorityExtensions.Any(ext => f.EndsWith(ext, StringComparison.OrdinalIgnoreCase));
-                    if (priority) Interlocked.Increment(ref _globalPriorityFilesCount);
-                    allTasks.Add((f, job, priority));
-                }
-            }
-
-            // On trie : d'abord TOUS les prioritaires (peu importe le job), puis le reste
-            var sortedTasks = allTasks
-                .OrderByDescending(t => t.IsPriority)
-                .ThenBy(t => Guid.NewGuid())// Mélange les fichiers d'une même catégorie pour que tous les Jobs avancent en même temps
-                .ToList();
-
-            int processedCount = 0;
-
-            var options = new ParallelOptions
-            {
-                MaxDegreeOfParallelism = _config.Current.MaxParallelFiles, // Nombre de threads
-
-            };
-
-            // ancienne logique de sauvegarde fichier après fichier
-            // for (int i = 0; i < files.Length; i++)
-
-            //nouvelle logique en utilisant le parallélisme
-            await Parallel.ForEachAsync(sortedTasks, options, async (task, ct) =>
-            {
-                _pauseEvent.Wait();
-                task.Job.PauseEvent.Wait();
-
-
-                if (_cts.Token.IsCancellationRequested) return;
-
-                string currentFilePath = task.FilePath;
-                BackupJob currentJob = task.Job;
-            
-
-                _monitor.CheckActivity(currentJob.Name, onProgress);
-
-                string dest = currentFilePath.Replace(currentJob.SourceDir, currentJob.TargetDir);
-                Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
-                FileInfo fi = new FileInfo(currentFilePath);
-
-                if (!task.IsPriority) // Si le fichier actuel n'est pas prioritaire
-                {
-                    // On vérifie s'il reste des prioritaires à traiter n'importe où
-                    while (Interlocked.CompareExchange(ref _globalPriorityFilesCount, 0, 0) > 0)
-                    {
-                        await Task.Delay(500); // On attend 0.5s avant de revérifier
-                        if (_cts.Token.IsCancellationRequested) return;
-
-                        _pauseEvent.Wait(); // On vérifie aussi la pause pendant l'attente
-                        task.Job.PauseEvent.Wait();
-                    }
-                }
-
-
-                // C. La règle des n Ko (Bande passante)
-                bool isLarge = fi.Length > _config.Current.LargeFileThreshold;
-                if (isLarge)
-                {
-                    // On envoie un signal "Attente" avant de bloquer
-                    onProgress?.Invoke(new BackupState
-                    {
-                        JobName = currentJob.Name,
-                        Status = JobState.Waiting,
-                        CurrentFile = Path.GetFileName(currentFilePath)
-                    });
-
-                    await _largeFileSemaphore.WaitAsync(_cts.Token);// Le thread s'arrête ici tant qu'un autre gros fichier n'a pas fini
-                    _pauseEvent.Wait();
-                }
-
-                try
-                {
-
-                    var sw = Stopwatch.StartNew();
-
-                    //ancienne logique 
-                    ///File.Copy(files[i], dest, true);
-                    ///
-
-
-                    // On utilise Task.Run pour que la copie physique ne bloque pas le thread
-                    await Task.Run(() => File.Copy(currentFilePath, dest, true), _cts.Token);
-
-                    _pauseEvent.Wait();
-                    task.Job.PauseEvent.Wait();
-
-                    long cryptTime = _config.Current.EncryptionExtensions.Contains(Path.GetExtension(dest).ToLower())
-                        ? _crypto.Encrypt(dest)
-                        : 0;
-
-                    sw.Stop();
-
-                    var entry = new LogEntry
-                    {
-                        JobName = currentJob.Name,
-                        Source = currentFilePath,
-                        Target = dest,
-                        FileSize = fi.Length,
-                        TransferTimeMs = sw.ElapsedMilliseconds,
-                        EncryptionTimeMs = cryptTime
-                    };
-
-                    // --- STRATÉGIE DE LOGGING  ---
-
-                    // A. LOG LOCAL : Uniquement si Local ou Both
-                    if (strategy == LogTarget.Local || strategy == LogTarget.Both)
-                    {
-                        _logger.Write(entry, _config.Current.LogFormat == LogFormat.Json);
-                    }
-
-                    // B. LOG DISTANT : Uniquement si Remote ou Both
-                    if (strategy == LogTarget.Remote || strategy == LogTarget.Both)
-                    {
-                        tcpLogger?.SendLog(entry);
-                    }
-
-                    int current = Interlocked.Increment(ref processedCount);
-                    onProgress?.Invoke(new BackupState
-                    {
-                        JobName = currentJob.Name,
-                        Status = JobState.Active,
-                        Progress = sortedTasks.Count > 0 ? (double)current / sortedTasks.Count * 100 : 100,
-                        CurrentFile = Path.GetFileName(currentFilePath)
-                    });
-
-                }
-                
-                catch (OperationCanceledException)
-                {
-                    // L'utilisateur a appuyé sur STOP. 
-                    // On sort de la boucle pour ce fichier.
-                    return;
-                }
-                finally
-                { // Indispensable pour que les fichiers normaux ne restent pas bloqués indéfiniment
-                    if (task.IsPriority)
-                    {
-                        Interlocked.Decrement(ref _globalPriorityFilesCount);
-                    }
-
-                
-                    if (isLarge) _largeFileSemaphore.Release();
-                }
-            });
+            reportProgress(Path.GetFileName(task.FilePath));
         }
         finally
         {
-            // On ferme la connexion proprement si elle a été ouverte
-            tcpLogger?.Dispose();
+            ReleaseConstraints(task, isLarge);
         }
+    }
+
+    // --- LOGIQUE MÉTIER SECONDAIRE ---
+
+    private List<(string FilePath, BackupJob Job, bool IsPriority)> PrepareTasks(List<BackupJob> jobs, Action<BackupState> onProgress)
+    {
+        var tasks = new List<(string FilePath, BackupJob Job, bool IsPriority)>();
+        foreach (var job in jobs)
+        {
+            job.JobCts = new CancellationTokenSource();
+            job.PauseEvent.Set();
+            _monitor.CheckActivity(job.Name, onProgress, true);
+
+            var files = Directory.GetFiles(job.SourceDir, "*.*", SearchOption.AllDirectories);
+            foreach (var f in files)
+            {
+                bool priority = _config.Current.PriorityExtensions.Any(ext => f.EndsWith(ext, StringComparison.OrdinalIgnoreCase));
+                if (priority) Interlocked.Increment(ref _globalPriorityFilesCount);
+                tasks.Add((f, job, priority));
+            }
+        }
+        return tasks.OrderByDescending(t => t.IsPriority).ThenBy(t => Guid.NewGuid()).ToList();
+    }
+
+    private async Task<bool> ApplyConstraints((string FilePath, BackupJob Job, bool IsPriority) task, FileInfo fi, Action<BackupState> onProgress)
+    {
+        if (!task.IsPriority)
+        {
+            while (Interlocked.CompareExchange(ref _globalPriorityFilesCount, 0, 0) > 0)
+            {
+                await Task.Delay(500);
+                _pauseEvent.Wait();
+                if (_cts.Token.IsCancellationRequested) return false;
+            }
+        }
+
+        bool isLarge = fi.Length > _config.Current.LargeFileThreshold;
+        if (isLarge)
+        {
+            onProgress?.Invoke(new BackupState { JobName = task.Job.Name, Status = JobState.Waiting, CurrentFile = fi.Name });
+            await _largeFileSemaphore.WaitAsync(_cts.Token);
+        }
+        return isLarge;
+    }
+
+    private void ReleaseConstraints((string FilePath, BackupJob Job, bool IsPriority) task, bool isLarge)
+    {
+        if (task.IsPriority) Interlocked.Decrement(ref _globalPriorityFilesCount);
+        if (isLarge) _largeFileSemaphore.Release();
+    }
+
+    private long ExecuteEncryptionIfRequired(string destPath)
+    {
+        // On garde le point (ex: ".pdf") pour correspondre au MainViewModel
+        string ext = Path.GetExtension(destPath).ToLower();
+
+        if (_config.Current.EncryptionExtensions.Any(e => e.Equals(ext, StringComparison.OrdinalIgnoreCase)))
+        {
+            long res = _crypto.Encrypt(destPath);
+            return res > 0 ? res : 0;
+        }
+        return 0;
+    }
+
+    private void LogExecution((string FilePath, BackupJob Job, bool IsPriority) task, string dest, long size, long time, long cryptoTime, PersistentTcpLogger? tcp)
+    {
+        var entry = new LogEntry
+        {
+            JobName = task.Job.Name,
+            Source = task.FilePath,
+            Target = dest,
+            FileSize = size,
+            TransferTimeMs = time,
+            EncryptionTimeMs = cryptoTime
+        };
+
+        var strategy = _config.Current.LogStrategy;
+        if (strategy == LogTarget.Local || strategy == LogTarget.Both)
+            _logger.Write(entry, _config.Current.LogFormat == LogFormat.Json);
+
+        if (strategy == LogTarget.Remote || strategy == LogTarget.Both)
+            tcp?.SendLog(entry);
+    }
+
+    private async Task<PersistentTcpLogger?> InitializeTcpLogger()
+    {
+        var strategy = _config.Current.LogStrategy;
+        if (strategy == LogTarget.Remote || strategy == LogTarget.Both)
+        {
+            try
+            {
+                var logger = new PersistentTcpLogger();
+                await logger.ConnectAsync(_config.Current.RemoteIp);
+                return logger;
+            }
+            catch { return null; }
+        }
+        return null;
     }
 }

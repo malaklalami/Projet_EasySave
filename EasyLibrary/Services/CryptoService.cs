@@ -1,27 +1,24 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.Threading; // Indispensable pour Thread.Sleep
+using System.Threading;
 
 namespace EasySave.Services
 {
     public class CryptoService
     {
-        // --- DÉCLARATION DES VARIABLES ---
         private readonly string _path;
         private readonly string _key;
 
-        // --- CONSTRUCTEUR ---
         public CryptoService(string path, string key)
         {
             _path = path;
             _key = key;
         }
 
-        // --- MÉTHODE ENCRYPT  ---
         public long Encrypt(string file)
         {
-            if (!File.Exists(_path)) return -10;
+            if (!File.Exists(_path)) return -1;
 
             int maxAttempts = 50;
             int currentAttempt = 0;
@@ -30,46 +27,51 @@ namespace EasySave.Services
             {
                 try
                 {
-                    var start = new ProcessStartInfo
+                    var startInfo = new ProcessStartInfo
                     {
                         FileName = _path,
                         Arguments = $"\"{file}\" \"{_key}\"",
                         CreateNoWindow = true,
                         UseShellExecute = false,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true
-
+                        // --- AJOUT INDISPENSABLE ICI ---
+                        WorkingDirectory = Path.GetDirectoryName(_path),
+                        // -------------------------------
+                        RedirectStandardOutput = false, // On désactive pour éviter les blocages de buffer
+                        RedirectStandardError = false
                     };
 
-                    using var p = Process.Start(start);
-                    p?.WaitForExit();
-
-                    // CAS 1 : Succès (Le Mutex n'était pas bloqué)
-                    // On vérifie si l'ExitCode est positif (temps en ms)
-                    if (p != null && p.ExitCode >= 0)
+                    using (Process p = Process.Start(startInfo))
                     {
-                        return p.ExitCode;
-                    }
+                        if (p != null)
+                        {
+                            p.WaitForExit();
 
-                    // CAS 2 : Le Mutex est occupé (Code -3 défini dans  CryptoSoft)
-                    if (p != null && p.ExitCode == -3)
-                    {
-                        currentAttempt++;
-                        Thread.Sleep(200); // On attend 100ms avant de retenter
-                        continue;
-                    }
+                            // CAS 1 : Succès (ExitCode >= 0)
+                            if (p.ExitCode >= 0)
+                            {
+                                return p.ExitCode;
+                            }
 
-                    return -20; // Autre erreur
+                            // CAS 2 : Le Mutex est occupé (Code -3)
+                            if (p.ExitCode == -3)
+                            {
+                                currentAttempt++;
+                                Thread.Sleep(100);
+                                continue;
+                            }
+
+                            // Si code d'erreur fatal (ex: -1), on ne boucle pas
+                            return -1;
+                        }
+                    }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    return -30;
+                    Debug.WriteLine($"[CRYPTO ERROR] {ex.Message}");
+                    return -1;
                 }
             }
-
-            return -40; // Échec après trop de tentatives
+            return -1;
         }
     }
 }
-//On a ajouté une boucle d'attente. Si CryptoService voit que CryptoSoft est occupé (code -3),
-//il ne panique pas : il attend 100 millisecondes et réessaie automatiquement. Il fait ça jusqu'à ce que la place se libère

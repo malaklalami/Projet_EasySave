@@ -28,14 +28,24 @@ public class MainViewModel
 
     public MainViewModel()
     {
+        // 1. Chargement de la configuration et de la langue
         _config.Load();
         Language.Load(Settings.Language);
+        ErrorService.Language = this.Language;
         Jobs = new ObservableCollection<BackupJob>(_manager.Load());
 
-        string cryptoExe = OperatingSystem.IsWindows() ? "CryptoSoft.exe" : "CryptoSoft";
-        var crypto = new CryptoService(cryptoExe, "MY_KEY");
-        _backup = new BackupService(_config, crypto);
+        // 2. Préparation du chemin vers CryptoSoft (Chemin absolu pour éviter le -1)
+        string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        string cryptoExeName = OperatingSystem.IsWindows() ? "CryptoSoft.exe" : "CryptoSoft";
+        string cryptoFullPath = Path.Combine(baseDir, cryptoExeName);
 
+        // 3. Initialisation UNIQUE du service de cryptage
+        var cryptoServiceInstance = new CryptoService(cryptoFullPath, "MY_KEY");
+
+        // 4. Initialisation du service de backup avec l'instance de cryptage
+        _backup = new BackupService(_config, cryptoServiceInstance);
+
+        // 5. Lancement du watcher de logiciel métier
         _watcher = new BusinessSoftwareWatcher(_config);
         InitializeWatcher();
     }
@@ -43,14 +53,23 @@ public class MainViewModel
     {
         _watcher.OnSoftwareDetected = () =>
         {
+            // 1. On bloque la sauvegarde
             _backup.PauseAll();
-            DisplayMessage?.Invoke(Language.Get("Software_Detected"));
+
+            // 2. On utilise ErrorService pour FORCER l'affichage du popup
+            // On passe le type "BusinessSoftwareActive"
+            ErrorService.Report(ErrorType.BusinessSoftwareActive, Settings.BusinessSoftware);
         };
+
         _watcher.OnSoftwareClosed = () =>
         {
+            // 1. On reprend la sauvegarde
             _backup.ResumeAll();
+
+            // 2. Simple info de reprise (pas forcément un popup bloquant)
             DisplayMessage?.Invoke(Language.Get("Software_Closed"));
         };
+
         _watcher.Start();
     }
 
@@ -169,6 +188,7 @@ public class MainViewModel
         _manager.Save(Jobs.ToList());
     }
 
+ 
 
     public async Task Execute(string input)
     {
