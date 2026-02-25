@@ -3,7 +3,8 @@ using EasySave.Core;
 using EasySave.Models;
 
 namespace EasyConsole;
-
+// Gère l'interface utilisateur en ligne de commande et l'aiguillage des actions vers le ViewModel.
+// Analyse les commandes de contrôle (pause, resume, stop) et assure la navigation entre les différents menus de configuration.
 public class MenuHandler
 {
     private readonly MainViewModel _vm;

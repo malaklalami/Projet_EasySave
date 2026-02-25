@@ -39,3 +39,5 @@ public class LanguageService
         return _translations.ContainsKey(key) ? _translations[key] : key;
     }
 }
+// Charge les fichiers de traduction JSON pour permettre de changer la langue de l'application.
+// Récupère le texte traduit associé à une clé (ou affiche la clé si la traduction est manquante).

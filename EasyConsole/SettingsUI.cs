@@ -44,3 +44,5 @@ public static class SettingsUI
         Console.ReadKey();
     }
 }
+// Fournit une interface console pour configurer la stratégie d'envoi des logs (Local, Réseau ou les deux).
+// Permet de modifier l'adresse IP distante et sauvegarde automatiquement les changements dans les paramètres globaux.

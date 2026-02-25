@@ -5,7 +5,7 @@ using System.Data;
 using System.IO;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization; // AJOUT INDISPENSABLE POUR LES ENUMS
+using System.Text.Json.Serialization;
 
 namespace EasySave.Services;
 
@@ -18,8 +18,8 @@ public class ConfigService
     private readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
-        WriteIndented = true, // Pour que le fichier soit beau dans Notepad
-        Converters = { new JsonStringEnumConverter() } // LE SECRET EST ICI : Transforme les chiffres en texte (ex: "Json")
+        WriteIndented = true,
+        Converters = { new JsonStringEnumConverter() } // Transforme les chiffres en texte (ex: "Json")
     };
 
     public Settings Current => _cache ?? Load();
@@ -52,3 +52,6 @@ public class ConfigService
         File.WriteAllText(_path, JsonSerializer.Serialize(_cache, _jsonOptions));
     }
 }
+//Centralise la lecture et l'écriture des paramètres utilisateurs dans un fichier JSON.
+//Assure la persistance des réglages(langue, extensions, IP) avec un système de cache pour optimiser les performances.
+//Garantit la stabilité de l'application via une gestion d'erreurs automatique en cas de fichier corrompu.

@@ -7,6 +7,7 @@ using EasySave.Models;
 
 namespace EasySave.Services;
 
+
 public class LoggerService
 {
     // L'objet qui sert de verrou (unique pour toute l'application)
@@ -41,5 +42,6 @@ public class LoggerService
             }
             
         }
-    }//Écrit physiquement les logs sur le disque. Il gère le choix entre JSON et XML de manière isolée
+    }
 }
+//Écrit physiquement les logs sur le disque. Il gère le choix entre JSON et XML de manière isolée

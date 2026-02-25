@@ -13,6 +13,9 @@ using System.Threading.Tasks;
 
 namespace EasyAvalonia.Views;
 
+// Fenêtre principale de l'interface graphique assurant le pilotage global des sauvegardes et l'affichage des alertes.
+// Synchronise le moteur de sauvegarde avec l'affichage via le thread UI pour mettre à jour la progression sans bloquer l'interface.
+
 public partial class MainWindow : Window, INotifyPropertyChanged
 {
     public MainViewModel BackendVM { get; set; }

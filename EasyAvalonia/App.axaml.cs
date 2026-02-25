@@ -1,7 +1,7 @@
 ﻿using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using EasyAvalonia.Views; // Dit à l'App où trouver la fenêtre principale
+using EasyAvalonia.Views;
 
 namespace EasyAvalonia;
 
@@ -21,3 +21,5 @@ public partial class App : Avalonia.Application
         base.OnFrameworkInitializationCompleted();
     }
 }
+// Point d'entrée principal de l'application graphique utilisant le framework Avalonia.
+// Initialise les ressources XAML et définit la fenêtre MainWindow comme interface de démarrage pour l'environnement de bureau.

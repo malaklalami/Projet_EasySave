@@ -72,3 +72,6 @@ public partial class SettingsWindow : Window
 
     private void Cancel_Click(object sender, RoutedEventArgs e) => this.Close();
 }
+
+// Interface de configuration permettant de modifier les paramètres globaux (logiciel métier, seuil de fichiers, parallélisme).
+// Assure la conversion des entrées textuelles en listes d'extensions valides et synchronise les choix avec le fichier de réglages JSON.

@@ -70,3 +70,6 @@ public partial class CreateJobWindow : Window
 
     private void Cancel_Click(object sender, RoutedEventArgs e) => Close();
 }
+
+// Gère la fenêtre de dialogue pour la création et l'édition des travaux de sauvegarde via une interface graphique.
+// Intègre des sélecteurs de dossiers natifs et valide les saisies utilisateur (nom, chemins, type) avant confirmation.

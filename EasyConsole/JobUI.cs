@@ -5,6 +5,9 @@ using EasySave.Core;
 
 namespace EasyConsole;
 
+// Gère les interactions utilisateur liées à la création, l'édition et la suppression des travaux de sauvegarde.
+// Permet le lancement asynchrone des sauvegardes et le contrôle individuel ou global de leur état via la console.
+
 public class JobUI
 {
     private readonly MainViewModel _vm;

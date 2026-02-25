@@ -66,3 +66,5 @@ public static class ErrorService // On le passe en static pour plus de simplicit
         return true;
     }
 }
+// Centralise la gestion des erreurs et la vérification des ressources système (disque, accès, source).
+// Traduit les messages d'erreurs en temps réel et les propage vers l'interface via un système d'événements.

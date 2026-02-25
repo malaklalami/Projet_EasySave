@@ -10,6 +10,8 @@ using static System.Reflection.Metadata.BlobBuilder;
 
 namespace EasyLibrary.ViewModels;
 
+// Fait le lien entre l'interface utilisateur et la logique métier en coordonnant tous les services.
+
 public class MainViewModel
 {
     private readonly ConfigService _config = new();
@@ -34,7 +36,7 @@ public class MainViewModel
         ErrorService.Language = this.Language;
         Jobs = new ObservableCollection<BackupJob>(_manager.Load());
 
-        // 2. Préparation du chemin vers CryptoSoft (Chemin absolu pour éviter le -1)
+        // 2. Préparation du chemin vers CryptoSoft 
         string baseDir = AppDomain.CurrentDomain.BaseDirectory;
         string cryptoExeName = OperatingSystem.IsWindows() ? "CryptoSoft.exe" : "CryptoSoft";
         string cryptoFullPath = Path.Combine(baseDir, cryptoExeName);
@@ -197,7 +199,7 @@ public class MainViewModel
         if (!selected.Any()) return;
         var jobsToRun = selected.Select(i => Jobs[i]).ToList();
 
-        // ON PASSE LE RELAIS AU BACKUPSERVICE !
+        // ON PASSE LE RELAIS AU BACKUPSERVICE 
         // - On lui donne la liste (jobsToRun)
         // - On lui donne la fonction pour qu'il nous renvoie l'état en direct
         await _backup.Execute(jobsToRun, (BackupState state) =>

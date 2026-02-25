@@ -58,3 +58,5 @@ public class BusinessSoftwareWatcher
         }
     }
 }
+// Surveille en arrière-plan la présence d'un logiciel métier pour suspendre les sauvegardes.
+// Déclenche des alertes automatiques à l'ouverture ou à la fermeture de l'application cible.

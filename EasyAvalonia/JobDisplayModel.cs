@@ -19,7 +19,7 @@ public class JobDisplayModel : INotifyPropertyChanged
             _progress = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(StatusColor));
-            // Indispensable pour masquer/afficher les boutons en temps réel
+            // masquer/afficher les boutons en temps réel
             OnPropertyChanged(nameof(IsRunning));
         }
     }
@@ -84,3 +84,7 @@ public class JobDisplayModel : INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }
+
+// Modèle de vue dédié à l'affichage d'un travail de sauvegarde dans l'interface graphique Avalonia.
+// Gère la mise à jour dynamique des couleurs de statut, de la progression et de la visibilité des boutons de contrôle.
+// Implémente l'interface INotifyPropertyChanged pour rafraîchir l'interface utilisateur en temps réel.

@@ -41,3 +41,5 @@ public class PersistentTcpLogger : IDisposable
         _client?.Dispose();
     }
 }
+// Gère la connexion réseau pour envoyer les logs en temps réel vers un serveur distant.
+// Envoie chaque événement de sauvegarde au format JSON sur une seule ligne via le protocole TCP.

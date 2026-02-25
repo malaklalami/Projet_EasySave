@@ -8,6 +8,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 
+// Orchestrateur principal qui gère l'exécution, la mise en pause et l'arrêt des sauvegardes.
+// Contrôle le parallélisme, la priorité des fichiers et la sécurité (chiffrement et logiciels métiers).
+
 namespace EasySave.Services;
 
 public class BackupService
@@ -80,6 +83,18 @@ public class BackupService
             string dest = task.FilePath.Replace(task.Job.SourceDir, task.Job.TargetDir);
             Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
             FileInfo fi = new FileInfo(task.FilePath);
+
+            // --- LOGIQUE SAUVEGARDE DIFFÉRENTIELLE ---
+            if (task.Job.Type == BackupType.Differential && File.Exists(dest))
+            {
+                // On compare la date de dernière écriture
+                if (fi.LastWriteTime <= File.GetLastWriteTime(dest))
+                {
+                    // Le fichier est déjà à jour, on simule une réussite et on sort
+                    reportProgress(Path.GetFileName(task.FilePath));
+                    return;
+                }
+            }
 
             bool isLarge = await ApplyConstraints(task, fi, onProgress);
 
@@ -231,3 +246,4 @@ public class BackupService
         }
     }
 }
+

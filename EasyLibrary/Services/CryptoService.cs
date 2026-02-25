@@ -33,9 +33,9 @@ namespace EasySave.Services
                         Arguments = $"\"{file}\" \"{_key}\"",
                         CreateNoWindow = true,
                         UseShellExecute = false,
-                        // --- AJOUT INDISPENSABLE ICI ---
+                        
                         WorkingDirectory = Path.GetDirectoryName(_path),
-                        // -------------------------------
+                        
                         RedirectStandardOutput = false, // On désactive pour éviter les blocages de buffer
                         RedirectStandardError = false
                     };
@@ -75,3 +75,7 @@ namespace EasySave.Services
         }
     }
 }
+
+//Pilote l'exécution de CryptoSoft en mode invisible avec gestion des accès concurrents.
+//Implémente une boucle de 50 tentatives pour résoudre les conflits liés au Mutex (Code -3).
+//Assure la sécurité des chemins via des arguments formatés et retourne le temps de traitement en ms.
