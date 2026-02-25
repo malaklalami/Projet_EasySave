@@ -121,11 +121,30 @@ public class JobUI
             string target = Console.ReadLine() ?? "";
             if (string.IsNullOrWhiteSpace(target)) target = job.TargetDir;
 
-            Console.Write($"{_vm.Language.Get("Input_Type")} [{(int)job.Type}] : ");
+            Console.Write($"{_vm.Language.Get("Input_Type")} [{job.Type}] {_vm.Language.Get("Input_Type_Options")} : ");
             string typeInput = Console.ReadLine() ?? "";
-            BackupType type = string.IsNullOrWhiteSpace(typeInput)
-                ? job.Type
-                : (typeInput == "1" ? BackupType.Differential : BackupType.Full);
+            BackupType type;
+
+            if (string.IsNullOrWhiteSpace(typeInput))
+            {
+                // 1. L'utilisateur a juste appuyé sur Entrée : on garde l'actuel
+                type = job.Type;
+            }
+            else if (typeInput == "1" || typeInput.Equals("Differential", StringComparison.OrdinalIgnoreCase))
+            {
+                // 2. L'utilisateur veut du différentiel (soit par le chiffre, soit par le mot)
+                type = BackupType.Differential;
+            }
+            else if (typeInput == "0" || typeInput.Equals("Full", StringComparison.OrdinalIgnoreCase))
+            {
+                // 3. L'utilisateur veut du complet
+                type = BackupType.Full;
+            }
+            else
+            {
+                // 4. L'utilisateur a tapé n'importe quoi : par sécurité, on garde l'actuel ou on met Full
+                type = job.Type;
+            }
 
 
             _vm.DeleteJob(index);
