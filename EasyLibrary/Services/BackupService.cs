@@ -84,18 +84,6 @@ public class BackupService
             Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
             FileInfo fi = new FileInfo(task.FilePath);
 
-            // --- LOGIQUE SAUVEGARDE DIFFÉRENTIELLE ---
-            if (task.Job.Type == BackupType.Differential && File.Exists(dest))
-            {
-                // On compare la date de dernière écriture
-                if (fi.LastWriteTime <= File.GetLastWriteTime(dest))
-                {
-                    // Le fichier est déjà à jour, on simule une réussite et on sort
-                    reportProgress(Path.GetFileName(task.FilePath));
-                    return;
-                }
-            }
-
             bool isLarge = await ApplyConstraints(task, fi, onProgress);
 
             try
@@ -139,6 +127,22 @@ public class BackupService
                 var files = Directory.GetFiles(job.SourceDir, "*.*", SearchOption.AllDirectories);
                 foreach (var f in files)
                 {
+                    // On calcule le chemin de destination pour pouvoir comparer
+                    string relativePath = Path.GetRelativePath(job.SourceDir, f);
+                    string dest = Path.Combine(job.TargetDir, relativePath);
+
+                    // LOGIQUE DIFFÉRENTIELLE ICI
+                    if (job.Type == BackupType.Differential && File.Exists(dest))
+                    {
+                        FileInfo fiSource = new FileInfo(f);
+                        FileInfo fiDest = new FileInfo(dest);
+
+                        // Si le fichier source n'est pas plus récent, on l'ignore (on ne l'ajoute pas à la liste)
+                        if (fiSource.LastWriteTime <= fiDest.LastWriteTime)
+                        {
+                            continue;
+                        }
+                    }
                     bool priority = _config.Current.PriorityExtensions.Any(ext => f.EndsWith(ext, StringComparison.OrdinalIgnoreCase));
                     if (priority) Interlocked.Increment(ref _globalPriorityFilesCount);
                     tasks.Add((f, job, priority));
@@ -246,4 +250,5 @@ public class BackupService
         }
     }
 }
+
 

@@ -15,6 +15,8 @@
   "Menu_Option_Stop": "STOP   : Type 'stop' for (all) or 'stop [id]'",
   "Menu_Quit": "q. Quit",
 
+  "Input_Type_Options": "(Type 0 or Full / 1 or Differential)",
+
   "Lang_Menu_Title": "--- Language Selection ---",
   "Lang_Option_En": "1. English",
   "Lang_Option_Fr": "2. French",
