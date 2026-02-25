@@ -19,25 +19,30 @@ public class ErrorEventArgs : EventArgs
     public bool IsCritical { get; set; }
 }
 
-public static class ErrorService // On le passe en static pour plus de simplicité
+public class ErrorService // On le passe en static pour plus de simplicité
 {
-    public static event EventHandler<ErrorEventArgs>? OnErrorDetected;
+    public event EventHandler<ErrorEventArgs>? OnErrorDetected;
 
     // Cette propriété sera remplie par le MainViewModel au démarrage
-    public static LanguageService? Language { get; set; }
+    private LanguageService? LanguageService { get; set; }
 
-    public static void Report(ErrorType type, string details, bool isCritical = false)
+    public ErrorService(LanguageService languageService)
     {
-        if (Language == null) return;
+        this.LanguageService = languageService;
+    }
+
+    public void Report(ErrorType type, string details, bool isCritical = false)
+    {
+        if (LanguageService == null) return;
 
         // Récupération de la traduction
         string message = type switch
         {
-            ErrorType.BusinessSoftwareActive => Language.Get("Software_Detected"),
-            ErrorType.DiskFull => string.Format(Language.Get("Error_DiskFull"), details),
-            ErrorType.SourceNotFound => string.Format(Language.Get("Error_SourceNotFound"), details),
-            ErrorType.AccessDenied => string.Format(Language.Get("Error_AccessDenied"), details),
-            _ => string.Format(Language.Get("Error_Unknown"), details)
+            ErrorType.BusinessSoftwareActive => LanguageService.Get("Software_Detected"),
+            ErrorType.DiskFull => string.Format(LanguageService.Get("Error_DiskFull"), details),
+            ErrorType.SourceNotFound => string.Format(LanguageService.Get("Error_SourceNotFound"), details),
+            ErrorType.AccessDenied => string.Format(LanguageService.Get("Error_AccessDenied"), details),
+            _ => string.Format(LanguageService.Get("Error_Unknown"), details)
         };
 
         // Envoi de l'événement vers la MainWindow

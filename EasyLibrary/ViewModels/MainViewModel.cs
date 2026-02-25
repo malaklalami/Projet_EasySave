@@ -21,19 +21,24 @@ public class MainViewModel
 
     public Action<string>? DisplayMessage { get; set; }
 
-    public LanguageService Language { get; } = new();
+    public LanguageService LanguageService { get; } = new();
+    public ErrorService ErrorService { get; private set; }
 
     // Propriété utilisée par SettingsUI
     public Settings Settings => _config.Current;
     public Action<BackupState>? OnProgressUpdate { get; set; }
     public ObservableCollection<BackupJob> Jobs { get; }
 
+    public double ProgressPercentage { get; private set; }
+
+    public Action<Action> UIWrapper { get; set; } = (a) => { a(); };
+
     public MainViewModel()
     {
         // 1. Chargement de la configuration et de la langue
         _config.Load();
-        Language.Load(Settings.Language);
-        ErrorService.Language = this.Language;
+        LanguageService.Load(Settings.Language);
+        ErrorService = new(LanguageService);
         Jobs = new ObservableCollection<BackupJob>(_manager.Load());
 
         // 2. Préparation du chemin vers CryptoSoft 
@@ -46,11 +51,20 @@ public class MainViewModel
 
         // 4. Initialisation du service de backup avec l'instance de cryptage
         _backup = new BackupService(_config, cryptoServiceInstance);
+        _backup.OnProgress += (state) =>
+        {
+            UIWrapper(() =>
+            {
+                ProgressPercentage = state.Progress;
+            });
+        };
 
         // 5. Lancement du watcher de logiciel métier
         _watcher = new BusinessSoftwareWatcher(_config);
         InitializeWatcher();
     }
+
+
     private void InitializeWatcher()
     {
         _watcher.OnSoftwareDetected = () =>
@@ -69,7 +83,7 @@ public class MainViewModel
             _backup.ResumeAll();
 
             // 2. Simple info de reprise (pas forcément un popup bloquant)
-            DisplayMessage?.Invoke(Language.Get("Software_Closed"));
+            DisplayMessage?.Invoke(LanguageService.Get("Software_Closed"));
         };
 
         _watcher.Start();
@@ -142,7 +156,7 @@ public class MainViewModel
     {
         Settings.Language = langCode;
         _config.Save();
-        Language.Load(langCode);
+        LanguageService.Load(langCode);
     }
 
     public void SwitchLogFormat()
@@ -153,8 +167,6 @@ public class MainViewModel
         _config.Save();
     }
 
-    
-        
 
     public void ManageEncryptionExtensions(string extension)
     {
@@ -163,7 +175,7 @@ public class MainViewModel
         extension = extension.Trim().ToLower();
         if (!extension.StartsWith(".")) extension = "." + extension;
 
-        
+
         if (!Settings.EncryptionExtensions.Contains(extension))
         {
             Settings.EncryptionExtensions.Add(extension);
@@ -190,7 +202,7 @@ public class MainViewModel
         _manager.Save(Jobs.ToList());
     }
 
- 
+
 
     public async Task Execute(string input)
     {
@@ -207,6 +219,6 @@ public class MainViewModel
             OnProgressUpdate?.Invoke(state);
         });
     }
-} 
+}
 
 

@@ -36,9 +36,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         // 1. Initialisation du ViewModel
         BackendVM = new MainViewModel();
+        BackendVM.UIWrapper = (action) => Dispatcher.UIThread.Post(action);
 
         // 2. Branchement unique des erreurs (centralisé)
-        ErrorService.OnErrorDetected += (s, e) =>
+        BackendVM.ErrorService.OnErrorDetected += (s, e) =>
         {
             // Dispatcher.UIThread.Post est la clé pour ne pas freezer l'interface
             Dispatcher.UIThread.Post(async () =>
@@ -67,7 +68,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         var messageBox = new Window
         {
-            Title = BackendVM.Language.Get("Title_Alert") ?? "EasySave Message",
+            Title = BackendVM.LanguageService.Get("Title_Alert") ?? "EasySave Message",
             Content = new TextBlock { Text = message, Margin = new Avalonia.Thickness(20), TextWrapping = Avalonia.Media.TextWrapping.Wrap },
             SizeToContent = SizeToContent.WidthAndHeight,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,

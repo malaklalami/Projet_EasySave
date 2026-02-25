@@ -40,6 +40,8 @@ public class BackupService
     public void ResumeJob(BackupJob job) => job.PauseEvent.Set();
     public void StopJob(BackupJob job) => job.JobCts.Cancel();
 
+    public event Action<BackupState> OnProgress;
+
     public async Task Execute(List<BackupJob> jobs, Action<BackupState> onProgress)
     {
         lock (this)
@@ -59,13 +61,15 @@ public class BackupService
             await ProcessSingleFile(task, tcpLogger, (fileName) =>
             {
                 int current = Interlocked.Increment(ref processedCount);
-                onProgress?.Invoke(new BackupState
+                var state = new BackupState
                 {
                     JobName = task.Job.Name,
                     Status = JobState.Active,
                     Progress = sortedTasks.Count > 0 ? (double)current / sortedTasks.Count * 100 : 100,
                     CurrentFile = fileName
-                });
+                };
+                onProgress?.Invoke(state);
+                OnProgress?.Invoke(state);
             }, onProgress);
         });
     }

@@ -41,6 +41,7 @@ public partial class CreateJobWindow : Window
     {
         var folder = await SelectFolder();
         if (folder != null) TargetInput.Text = folder;
+
     }
 
     private async Task<string?> SelectFolder()

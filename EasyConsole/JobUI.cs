@@ -16,27 +16,27 @@ public class JobUI
 
     public void CreateJob()
     {
-        Console.WriteLine($"\n{_vm.Language.Get("Create_Title")}");
+        Console.WriteLine($"\n{_vm.LanguageService.Get("Create_Title")}");
 
 
-        Console.Write(_vm.Language.Get("Input_JobName"));
+        Console.Write(_vm.LanguageService.Get("Input_JobName"));
         string name = Console.ReadLine() ?? "";
 
-        Console.Write(_vm.Language.Get("Input_SourcePath"));
+        Console.Write(_vm.LanguageService.Get("Input_SourcePath"));
         string source = Console.ReadLine() ?? "";
         if (!Directory.Exists(source) && !string.IsNullOrWhiteSpace(source))
-            Console.WriteLine(_vm.Language.Get("Error_DirNotExists"));
+            Console.WriteLine(_vm.LanguageService.Get("Error_DirNotExists"));
 
-        Console.Write(_vm.Language.Get("Input_TargetPath"));
+        Console.Write(_vm.LanguageService.Get("Input_TargetPath"));
         string target = Console.ReadLine() ?? "";
 
-        Console.Write(_vm.Language.Get("Input_Type"));
+        Console.Write(_vm.LanguageService.Get("Input_Type"));
         Enum.TryParse(Console.ReadLine(), out BackupType type);
 
         try
         {
             _vm.AddJob(name, source, target, type);
-            Console.WriteLine(_vm.Language.Get("Create_Success"));
+            Console.WriteLine(_vm.LanguageService.Get("Create_Success"));
         }
         catch (Exception ex)
         {
@@ -46,8 +46,8 @@ public class JobUI
 
     public void ExecuteSelection()
     {
-        Console.WriteLine($"\n{_vm.Language.Get("Run_Title")}");
-        Console.Write(_vm.Language.Get("Run_Input"));
+        Console.WriteLine($"\n{_vm.LanguageService.Get("Run_Title")}");
+        Console.Write(_vm.LanguageService.Get("Run_Input"));
         string input = Console.ReadLine() ?? "";
 
         // On lance la tâche en arrière-plan
@@ -55,7 +55,7 @@ public class JobUI
         {
             await _vm.Execute(input);
 
-            Console.WriteLine($"\n>{_vm.Language.Get("Run_Finished")}");
+            Console.WriteLine($"\n>{_vm.LanguageService.Get("Run_Finished")}");
             Console.Write("\n> "); // On réaffiche le prompt pour le menu
         });
 
@@ -69,7 +69,7 @@ public class JobUI
             else if (action == "resume") _vm.ResumeAllJobs();
             else if (action == "stop") _vm.StopAllJobs();
 
-            Console.WriteLine($"\n[OK] {_vm.Language.Get("All_Jobs_Label")} : {action}");
+            Console.WriteLine($"\n[OK] {_vm.LanguageService.Get("All_Jobs_Label")} : {action}");
         }
         else
         {
@@ -80,48 +80,48 @@ public class JobUI
 
             // On affiche la confirmation ici !
             string statusKey = action == "pause" ? "Job_Paused" : (action == "resume" ? "Job_Resumed" : "Job_Stopped");
-            Console.WriteLine($"\n[OK] {_vm.Language.Get(statusKey)}: {target}");
+            Console.WriteLine($"\n[OK] {_vm.LanguageService.Get(statusKey)}: {target}");
         }
     }
 
     public void DeleteJob()
     {
-        Console.Write(_vm.Language.Get("Delete_Select"));
+        Console.Write(_vm.LanguageService.Get("Delete_Select"));
         if (int.TryParse(Console.ReadLine(), out int index) && index >= 0 && index < _vm.Jobs.Count)
         {
             _vm.DeleteJob(index);
-            Console.WriteLine(_vm.Language.Get("Delete_Success"));
+            Console.WriteLine(_vm.LanguageService.Get("Delete_Success"));
         }
         else
         {
-            Console.WriteLine(_vm.Language.Get("Invalid_Choice"));
+            Console.WriteLine(_vm.LanguageService.Get("Invalid_Choice"));
         }
     }
 
     public void EditJob()
     {
-        Console.WriteLine($"\n{_vm.Language.Get("Edit_Title")}");
-        Console.Write(_vm.Language.Get("Edit_Select"));
+        Console.WriteLine($"\n{_vm.LanguageService.Get("Edit_Title")}");
+        Console.Write(_vm.LanguageService.Get("Edit_Select"));
 
 
         if (int.TryParse(Console.ReadLine(), out int index) && index >= 0 && index < _vm.Jobs.Count)
         {
             var job = _vm.Jobs[index];
 
-            Console.Write($"{_vm.Language.Get("Input_JobName")} [{job.Name}] : ");
+            Console.Write($"{_vm.LanguageService.Get("Input_JobName")} [{job.Name}] : ");
             string name = Console.ReadLine() ?? "";
             if (string.IsNullOrWhiteSpace(name)) name = job.Name;
 
-            Console.Write($"{_vm.Language.Get("Input_SourcePath")} [{job.SourceDir}] : ");
+            Console.Write($"{_vm.LanguageService.Get("Input_SourcePath")} [{job.SourceDir}] : ");
             string source = Console.ReadLine() ?? "";
             if (string.IsNullOrWhiteSpace(source)) source = job.SourceDir;
 
 
-            Console.Write($"{_vm.Language.Get("Input_TargetPath")} [{job.TargetDir}] : ");
+            Console.Write($"{_vm.LanguageService.Get("Input_TargetPath")} [{job.TargetDir}] : ");
             string target = Console.ReadLine() ?? "";
             if (string.IsNullOrWhiteSpace(target)) target = job.TargetDir;
 
-            Console.Write($"{_vm.Language.Get("Input_Type")} [{job.Type}] {_vm.Language.Get("Input_Type_Options")} : ");
+            Console.Write($"{_vm.LanguageService.Get("Input_Type")} [{job.Type}] {_vm.LanguageService.Get("Input_Type_Options")} : ");
             string typeInput = Console.ReadLine() ?? "";
             BackupType type;
 
@@ -151,12 +151,12 @@ public class JobUI
             _vm.AddJob(name, source, target, type);
 
 
-            Console.WriteLine(string.Format(_vm.Language.Get("Edit_Success"), index, name));
+            Console.WriteLine(string.Format(_vm.LanguageService.Get("Edit_Success"), index, name));
         }
         else
         {
             
-            Console.WriteLine(_vm.Language.Get("Invalid_Choice"));
+            Console.WriteLine(_vm.LanguageService.Get("Invalid_Choice"));
         }
     }
 }
