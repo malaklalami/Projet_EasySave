@@ -59,9 +59,34 @@ public class MenuHandler
         for (int i = 0; i < _vm.Jobs.Count; i++)
             Console.WriteLine($"[{i}] {_vm.Jobs[i].Name} -> {_vm.Jobs[i].SourceDir}");
 
-        Console.WriteLine("\n" + new string('-', 30));
         for (int i = 1; i <= 10; i++)
-            Console.WriteLine(_vm.LanguageService.Get($"Menu_Option{i}"));
+        {
+            string label = _vm.LanguageService.Get($"Menu_Option{i}");
+
+            if (i == 4) // Format des Logs
+            {
+                Console.WriteLine($"{label} [{_vm.Settings.LogFormat}]");
+            }
+            else if (i == 8) // Extensions cryptées
+            {
+                string ext = _vm.Settings.EncryptionExtensions.Any()
+                    ? string.Join(", ", _vm.Settings.EncryptionExtensions)
+                    : _vm.LanguageService.Get("No_Extensions");
+                Console.WriteLine($"{label} [ {ext} ]");
+            }
+            else if (i == 9) // Logiciel métier
+            {
+                string soft = !string.IsNullOrEmpty(_vm.Settings.BusinessSoftware)
+                    ? _vm.Settings.BusinessSoftware
+                    : _vm.LanguageService.Get("No_Software");
+                Console.WriteLine($"{label} [ {soft} ]");
+            }
+            else
+            {
+                // Options standards (1, 2, 3, 5, 6, 7, 10)
+                Console.WriteLine(label);
+            }
+        }
 
         Console.WriteLine(_vm.LanguageService.Get("Menu_Option_Pause"));
         Console.WriteLine(_vm.LanguageService.Get("Menu_Option_Resume"));
