@@ -6,15 +6,18 @@ namespace EasySave.Models;
 
 public class BackupState
 {
-    // PISTE : Utilisation d'un ID numérique (index ou ID unique) plutôt que le nom
+    // ID unique du travail pour le suivi en parallèle
     public int JobId { get; set; }
 
+    // État actuel (Active, Paused, Inactive, Waiting)
     public JobState Status { get; set; } = JobState.Inactive;
 
-    // PISTE : Progress supprimé (il sera calculé dynamiquement par rapport à la liste des fichiers)
+    // Nombre total de fichiers au départ (pour calculer la progression)
+    public int TotalFilesCount { get; set; }
 
-    // PISTE : On stocke la liste des chemins des fichiers restants à copier
+    // Liste des chemins des fichiers restants à copier
     public List<string> FilesToCopy { get; set; } = new();
 
+    // Horodatage de la dernière mise à jour
     public DateTime LastUpdate { get; set; } = DateTime.Now;
 }

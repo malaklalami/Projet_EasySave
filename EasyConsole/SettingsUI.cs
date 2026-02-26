@@ -1,6 +1,5 @@
-﻿using EasyLibrary.ViewModels;
-using EasySave.Core;
-using EasySave.Models;
+﻿using EasySave.Core;
+using EasySave.ViewModels;
 
 namespace EasyConsole;
 
@@ -9,40 +8,24 @@ public static class SettingsUI
     public static void LogDestination(MainViewModel vm)
     {
         Console.Clear();
-        Console.WriteLine("=== CONFIGURATION DE LA DESTINATION ===");
-        // On affiche le mode actuel pour que l'utilisateur sache où il en est
-        Console.WriteLine($"Mode actuel : {vm.Settings.LogStrategy}");
-        Console.WriteLine("---------------------------------------");
-        Console.WriteLine("1. Local (PC uniquement)");
-        Console.WriteLine("2. Remote (Console Déportée uniquement)");
-        Console.WriteLine("3. Both (Local + Console Déportée)");
-        Console.Write("\nVotre choix : ");
+        Console.WriteLine("=== LOG TARGET CONFIGURATION ===");
+        Console.WriteLine("1. Local | 2. Remote | 3. Both");
+        Console.Write("\nChoice: ");
 
-        if (int.TryParse(Console.ReadLine(), out int choice))
+        if (int.TryParse(Console.ReadLine(), out int choice) && choice >= 1 && choice <= 3)
         {
-            // On met à jour l'Enum (0=Local, 1=Remote, 2=Both)
             vm.Settings.LogStrategy = (LogTarget)(choice - 1);
 
-            // Si l'utilisateur veut du réseau, on lui demande l'IP
             if (vm.Settings.LogStrategy != LogTarget.Local)
             {
-                Console.Write($"IP du serveur [{vm.Settings.RemoteIp}] : ");
+                Console.Write($"Server IP [{vm.Settings.RemoteIp}] : ");
                 string ip = Console.ReadLine() ?? "";
                 if (!string.IsNullOrWhiteSpace(ip)) vm.Settings.RemoteIp = ip;
             }
 
-            // On demande au ViewModel de sauvegarder dans le JSON
             vm.SaveSettings();
-            Console.WriteLine("\n[OK] Paramètres enregistrés.");
+            Console.WriteLine("\n[OK] Settings saved.");
         }
-        else
-        {
-            Console.WriteLine("\n[ERREUR] Choix invalide.");
-        }
-
-        Console.WriteLine("\nAppuyez sur une touche pour revenir au menu...");
-        Console.ReadKey();
+        Thread.Sleep(1000);
     }
 }
-// Fournit une interface console pour configurer la stratégie d'envoi des logs (Local, Réseau ou les deux).
-// Permet de modifier l'adresse IP distante et sauvegarde automatiquement les changements dans les paramètres globaux.

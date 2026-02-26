@@ -13,60 +13,90 @@ namespace EasySave.ViewModels;
 
 public class MainViewModel
 {
+    // --- Services Privés ---
     private readonly ConfigService _config = new();
     private readonly JobManager _manager = new();
     private readonly BackupService _backup;
-    private readonly BusinessSoftwareWatcher _watcher;
+    private readonly BusinessSoftwareMonitor _monitor;
 
+    // --- Propriétés Publiques ---
+    public LanguageService LanguageService { get; } = new();
     public Settings Settings => _config.Current;
     public ObservableCollection<BackupJob> Jobs { get; }
+
+    // Événement pour que l'UI (Console/WPF) reçoive la progression
     public Action<BackupState>? OnProgressUpdate { get; set; }
 
     public MainViewModel()
     {
-        // 1. Chargement
+        // 1. Chargement de la configuration globale
         _config.Load();
-        Jobs = new ObservableCollection<BackupJob>(_manager.Load());
 
-        // 2. Setup CryptoSoft
+        // 2. Initialisation de la langue (basée sur les settings)
+        LanguageService.Load(Settings.Language);
+
+        // 3. Initialisation du moniteur de logiciel métier
+        _monitor = new BusinessSoftwareMonitor(_config);
+
+        // 4. Setup du service de chiffrement (CryptoSoft)
         string baseDir = AppDomain.CurrentDomain.BaseDirectory;
         string cryptoExe = OperatingSystem.IsWindows() ? "CryptoSoft.exe" : "CryptoSoft";
-        var cryptoService = new CryptoService(Path.Combine(baseDir, cryptoExe), "MY_KEY");
+        string cryptoPath = Path.Combine(baseDir, cryptoExe);
 
-        // 3. Setup Moteur de Backup
-        _backup = new BackupService(_config, cryptoService);
+        // On utilise la clé définie dans les settings (ou une clé fixe "MY_KEY")
+        var cryptoService = new CryptoService(cryptoPath, "MY_KEY");
+
+        // 5. Initialisation du moteur de backup (Injection des 3 dépendances)
+        _backup = new BackupService(_config, cryptoService, _monitor);
+
+        // On s'abonne aux mises à jour du moteur pour les renvoyer à l'UI
         _backup.OnProgress += (state) => OnProgressUpdate?.Invoke(state);
 
-        // 4. Setup Surveillance Logiciel Métier
-        _watcher = new BusinessSoftwareWatcher(_config);
-        _watcher.Start();
+        // 6. Chargement de la liste des travaux
+        Jobs = new ObservableCollection<BackupJob>(_manager.Load());
     }
 
-    // --- PILOTAGE (Lien direct avec tes boutons UI) ---
+    // --- MÉTHODES D'EXÉCUTION ---
 
     public async Task ExecuteSelection(string input)
     {
-        // On récupère les jobs demandés (ex: "1-3")
+        // On transforme la saisie (ex: "1-3") en liste d'index
         var selectedIndices = JobParser.ParseSelection(input, Jobs.Count);
         var jobsToRun = selectedIndices.Select(i => Jobs[i]).ToList();
 
         if (jobsToRun.Any())
         {
+            // On réinitialise les signaux de contrôle avant de partir
+            JobControlService.IsStopped = false;
+            JobControlService.IsPaused = false;
+
+            // Lancement du moteur
             await _backup.Execute(jobsToRun);
         }
     }
 
-    // Méthodes Hyper Simples pour les boutons Pause/Play/Stop
+    // --- MÉTHODES DE CONTRÔLE (V3) ---
+
     public void PauseAll() => JobControlService.Pause();
     public void ResumeAll() => JobControlService.Resume();
     public void StopAll() => JobControlService.Stop();
 
-    // --- GESTION DES JOBS ---
+    // --- GESTION DES TRAVAUX (CRUD) ---
 
     public void AddJob(string name, string src, string dest, BackupType type)
     {
+        // Calcul automatique du prochain ID
         int nextId = Jobs.Count > 0 ? Jobs.Max(j => j.Id) + 1 : 1;
-        var job = new BackupJob { Id = nextId, Name = name, SourceDir = src, TargetDir = dest, Type = type };
+
+        var job = new BackupJob
+        {
+            Id = nextId,
+            Name = name,
+            SourceDir = src,
+            TargetDir = dest,
+            Type = type
+        };
+
         Jobs.Add(job);
         _manager.Save(Jobs.ToList());
     }
@@ -77,6 +107,12 @@ public class MainViewModel
         _manager.Save(Jobs.ToList());
     }
 
+    public void ClearAllJobs()
+    {
+        Jobs.Clear();
+        _manager.Save(new List<BackupJob>());
+    }
+
     // --- CONFIGURATION ---
 
     public void SaveSettings() => _config.Save();
@@ -84,6 +120,32 @@ public class MainViewModel
     public void UpdateLanguage(string lang)
     {
         Settings.Language = lang;
+        _config.Save();
+        LanguageService.Load(lang); // Recharge immédiatement les fichiers JSON
+    }
+
+    public void SwitchLogFormat()
+    {
+        Settings.LogFormat = (Settings.LogFormat == LogFormat.Json) ? LogFormat.Xml : LogFormat.Json;
+        _config.Save();
+    }
+
+    public void ManageEncryptionExtensions(string ext)
+    {
+        if (string.IsNullOrWhiteSpace(ext)) return;
+        if (!ext.StartsWith(".")) ext = "." + ext;
+
+        if (Settings.EncryptionExtensions.Contains(ext))
+            Settings.EncryptionExtensions.Remove(ext);
+        else
+            Settings.EncryptionExtensions.Add(ext);
+
+        _config.Save();
+    }
+
+    public void UpdateBusinessSoftware(string name)
+    {
+        Settings.BusinessSoftware = name;
         _config.Save();
     }
 }

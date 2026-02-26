@@ -13,19 +13,21 @@ public class BackupService
 {
     private readonly ConfigService _config;
     private readonly CryptoService _crypto;
+    private readonly BusinessSoftwareMonitor _monitor; // Ajouté pour UpdateControlState
     private readonly LoggerService _logger = new();
 
-    // Les 4 listes imposées par la logique de priorité
     private readonly Queue<FileTask> _prioSmall = new(), _prioLarge = new(), _nonPrioSmall = new(), _nonPrioLarge = new();
     private readonly object _lock = new();
     private int _totalFiles, _processedFiles;
 
     public event Action<BackupState>? OnProgress;
 
-    public BackupService(ConfigService config, CryptoService crypto)
+    // Constructeur mis à jour pour recevoir le moniteur
+    public BackupService(ConfigService config, CryptoService crypto, BusinessSoftwareMonitor monitor)
     {
         _config = config;
         _crypto = crypto;
+        _monitor = monitor;
     }
 
     private record FileTask(string Source, string Dest, BackupJob Job);
@@ -35,11 +37,9 @@ public class BackupService
         _processedFiles = 0;
         Md5Service.LoadCache();
 
-        // 1. PREPROCESSING (Le tri)
         PrepareQueues(jobs);
         if (_totalFiles == 0) return;
 
-        // 2. THREAD POOL (L'exécution parallèle V3)
         var workers = Enumerable.Range(0, _config.Current.MaxParallelFiles)
                                 .Select(_ => Task.Run(WorkerLoop)).ToList();
 
@@ -58,7 +58,6 @@ public class BackupService
                 foreach (var f in Directory.GetFiles(job.SourceDir, "*.*", SearchOption.AllDirectories))
                 {
                     string dest = f.Replace(job.SourceDir, job.TargetDir);
-                    // On n'ajoute que si MD5 a changé (Logique différentielle)
                     if (job.Type == BackupType.Differential && !Md5Service.HasChanged(job.Name, f, Md5Service.GetHash(f))) continue;
 
                     Dispatch(f, dest, job);
@@ -70,7 +69,7 @@ public class BackupService
 
     private void WorkerLoop()
     {
-        while (!JobControlService.IsStopped) // Condition d'arrêt ultra simple
+        while (!JobControlService.IsStopped)
         {
             FileTask? task = null;
             lock (_lock)
@@ -88,17 +87,10 @@ public class BackupService
 
     private void ProcessFile(FileTask task)
     {
-        // On met à jour l'état de la pause en fonction du logiciel métier
+        // 1. Check logiciel métier + Pause
         _monitor.UpdateControlState();
-
-        // On utilise la "douane" de la télécommande qu'on a faite avant
         JobControlService.WaitIfPaused();
 
-        if (JobControlService.IsStopped) return;
-        // 1. On passe par la douane : si c'est sur pause, on s'arrête ici
-        JobControlService.WaitIfPaused();
-
-        // 2. Si on a cliqué sur Stop, on sort tout de suite
         if (JobControlService.IsStopped) return;
 
         try
@@ -106,11 +98,13 @@ public class BackupService
             Directory.CreateDirectory(Path.GetDirectoryName(task.Dest)!);
             File.Copy(task.Source, task.Dest, true);
 
-            // Chiffrement (toujours avec la vérification Stop/Pause entre chaque étape)
-            if (_config.Current.EncryptionExtensions.Any(e => task.Dest.EndsWith(e)))
+            // 2. Check Cryptage + Pause entre deux étapes
+            if (_config.Current.EncryptionExtensions.Any(e => task.Dest.EndsWith(e, StringComparison.OrdinalIgnoreCase)))
             {
+                _monitor.UpdateControlState();
                 JobControlService.WaitIfPaused();
                 if (JobControlService.IsStopped) return;
+
                 _crypto.Encrypt(task.Dest);
             }
 
@@ -119,26 +113,61 @@ public class BackupService
         catch { }
     }
 
-    private void Dispatch(string s, string d, BackupJob j)
+    private void FinalizeFile(FileTask task)
     {
-        bool prio = _config.Current.PriorityExtensions.Any(e => s.EndsWith(e));
-        bool large = new FileInfo(s).Length > (_config.Current.LargeFileThreshold * 1024);
-        if (prio) { if (large) _prioLarge.Enqueue(new(s, d, j)); else _prioSmall.Enqueue(new(s, d, j)); }
-        else { if (large) _nonPrioLarge.Enqueue(new(s, d, j)); else _nonPrioSmall.Enqueue(new(s, d, j)); }
+        // On regarde dans la config si on doit logger en JSON ou non (XML)
+        bool useJson = _config.Current.LogFormat == LogFormat.Json;
+
+        // Log l'opération avec le bon paramètre
+        _logger.Write(new LogEntry
+        {
+            JobName = task.Job.Name,
+            Source = task.Source,
+            Target = task.Dest,
+            Timestamp = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"),
+            FileSize = new FileInfo(task.Source).Length
+        }, useJson);
+
+        // Incrémente le compteur global
+        Interlocked.Increment(ref _processedFiles);
+
+        // Notifie l'UI
+        NotifyProgress(task);
     }
     private void NotifyProgress(FileTask task)
     {
-        // On crée l'état instantané
         var state = new BackupState
         {
-            JobId = task.Job.Id, // On utilise l'ID
+            JobId = task.Job.Id,
             Status = JobState.Active,
             LastUpdate = DateTime.Now,
-            // On filtre la file d'attente pour savoir ce qu'il reste
-            // (C'est ici que la magie opère)
+            TotalFilesCount = _totalFiles,
             FilesToCopy = GetRemainingFilesForJob(task.Job.Id)
         };
 
         OnProgress?.Invoke(state);
+    }
+
+    private List<string> GetRemainingFilesForJob(int jobId)
+    {
+        lock (_lock)
+        {
+            // Liste tous les fichiers qui sont encore dans les files d'attente pour ce job
+            return _prioSmall.Concat(_prioLarge)
+                             .Concat(_nonPrioSmall)
+                             .Concat(_nonPrioLarge)
+                             .Where(t => t.Job.Id == jobId)
+                             .Select(t => t.Source)
+                             .ToList();
+        }
+    }
+
+    private void Dispatch(string s, string d, BackupJob j)
+    {
+        bool prio = _config.Current.PriorityExtensions.Any(e => s.EndsWith(e, StringComparison.OrdinalIgnoreCase));
+        bool large = new FileInfo(s).Length > (_config.Current.LargeFileThreshold * 1024);
+
+        if (prio) { if (large) _prioLarge.Enqueue(new(s, d, j)); else _prioSmall.Enqueue(new(s, d, j)); }
+        else { if (large) _nonPrioLarge.Enqueue(new(s, d, j)); else _nonPrioSmall.Enqueue(new(s, d, j)); }
     }
 }
