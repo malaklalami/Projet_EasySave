@@ -21,24 +21,24 @@ public class MainViewModel
 
     public Action<string>? DisplayMessage { get; set; }
 
-    public LanguageService LanguageService { get; } = new();
-    public ErrorService ErrorService { get; private set; }
+  //piste:  public LanguageService LanguageService { get; } = new();
+   //piste: public ErrorService ErrorService { get; private set; }
 
     // Propriété utilisée par SettingsUI
     public Settings Settings => _config.Current;
     public Action<BackupState>? OnProgressUpdate { get; set; }
     public ObservableCollection<BackupJob> Jobs { get; }
 
-    public double ProgressPercentage { get; private set; }
+   //piste: public double ProgressPercentage { get; private set; }
 
-    public Action<Action> UIWrapper { get; set; } = (a) => { a(); };
+  //piste:  public Action<Action> UIWrapper { get; set; } = (a) => { a(); };
 
     public MainViewModel()
     {
         // 1. Chargement de la configuration et de la langue
         _config.Load();
-        LanguageService.Load(Settings.Language);
-        ErrorService = new(LanguageService);
+      //piste:  LanguageService.Load(Settings.Language);
+      //piste:  ErrorService = new(LanguageService);
         Jobs = new ObservableCollection<BackupJob>(_manager.Load());
 
         // 2. Préparation du chemin vers CryptoSoft 
@@ -51,12 +51,12 @@ public class MainViewModel
 
         // 4. Initialisation du service de backup avec l'instance de cryptage
         _backup = new BackupService(_config, cryptoServiceInstance);
-        _backup.OnProgress += (state) =>
+       //piste: _backup.OnProgress += (state) =>
         {
-            UIWrapper(() =>
-            {
-                ProgressPercentage = state.Progress;
-            });
+       //piste     UIWrapper(() =>
+            //{
+          //piste      ProgressPercentage = state.Progress;
+            //});
         };
 
         // 5. Lancement du watcher de logiciel métier
@@ -83,7 +83,7 @@ public class MainViewModel
             _backup.ResumeAll();
 
             // 2. Simple info de reprise (pas forcément un popup bloquant)
-            DisplayMessage?.Invoke(LanguageService.Get("Software_Closed"));
+          //piste:  DisplayMessage?.Invoke(LanguageService.Get("Software_Closed"));
         };
 
         _watcher.Start();
@@ -156,7 +156,7 @@ public class MainViewModel
     {
         Settings.Language = langCode;
         _config.Save();
-        LanguageService.Load(langCode);
+      //piste:  LanguageService.Load(langCode);
     }
 
     public void SwitchLogFormat()

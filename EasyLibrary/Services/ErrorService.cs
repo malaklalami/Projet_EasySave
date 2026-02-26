@@ -19,30 +19,30 @@ public class ErrorEventArgs : EventArgs
     public bool IsCritical { get; set; }
 }
 
-public class ErrorService // On le passe en static pour plus de simplicité
+//piste:public class ErrorService // On le passe en static pour plus de simplicité
 {
-    public event EventHandler<ErrorEventArgs>? OnErrorDetected;
+   //piste: public event EventHandler<ErrorEventArgs>? OnErrorDetected;
 
     // Cette propriété sera remplie par le MainViewModel au démarrage
-    private LanguageService? LanguageService { get; set; }
+   //piste private LanguageService? LanguageService { get; set; }
 
-    public ErrorService(LanguageService languageService)
+   //piste public ErrorService(LanguageService languageService)
     {
-        this.LanguageService = languageService;
+       //piste: this.LanguageService = languageService;
     }
 
-    public void Report(ErrorType type, string details, bool isCritical = false)
+   //piste: public void Report(ErrorType type, string details, bool isCritical = false)
     {
-        if (LanguageService == null) return;
+    //piste:    if (LanguageService == null) return;
 
         // Récupération de la traduction
         string message = type switch
         {
-            ErrorType.BusinessSoftwareActive => LanguageService.Get("Software_Detected"),
-            ErrorType.DiskFull => string.Format(LanguageService.Get("Error_DiskFull"), details),
-            ErrorType.SourceNotFound => string.Format(LanguageService.Get("Error_SourceNotFound"), details),
-            ErrorType.AccessDenied => string.Format(LanguageService.Get("Error_AccessDenied"), details),
-            _ => string.Format(LanguageService.Get("Error_Unknown"), details)
+      //piste:      ErrorType.BusinessSoftwareActive => LanguageService.Get("Software_Detected"),
+    //piste:        ErrorType.DiskFull => string.Format(LanguageService.Get("Error_DiskFull"), details),
+       //piste     ErrorType.SourceNotFound => string.Format(LanguageService.Get("Error_SourceNotFound"), details),
+      //piste:      ErrorType.AccessDenied => string.Format(LanguageService.Get("Error_AccessDenied"), details),
+         //piste:   _ => string.Format(LanguageService.Get("Error_Unknown"), details)
         };
 
         // Envoi de l'événement vers la MainWindow

@@ -23,7 +23,7 @@ public class ConfigService
     };
 
     public Settings Current => _cache ?? Load();
-    public event Action? OnSettingsChanged;
+   //piste: public event Action? OnSettingsChanged;
 
     public Settings Load()
     {
