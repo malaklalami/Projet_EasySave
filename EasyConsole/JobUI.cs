@@ -37,11 +37,9 @@ public class JobUI
         Console.Write(_vm.LanguageService.Get("Run_Input"));
         string input = Console.ReadLine() ?? "";
 
-        Task.Run(async () => {
-            await _vm.ExecuteSelection(input);
-            Console.WriteLine($"\n{_vm.LanguageService.Get("Run_Finished")}");
-            Console.Write("\n> ");
-        });
+        _=_vm.ExecuteSelection(input);
+        Console.WriteLine($"\n{_vm.LanguageService.Get("Run_Started")}");
+
     }
 
     public void DeleteJob()

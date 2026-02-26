@@ -52,4 +52,25 @@ public class ConfigService
         // Si quelqu'un écoute (l'UI par exemple), on lance l'alerte
         OnSettingsChanged?.Invoke();
     }
+
+
+
+public void ManageEncryptionExtension(string ext)
+    {
+        if (string.IsNullOrWhiteSpace(ext)) return;
+        if (!ext.StartsWith(".")) ext = "." + ext;
+
+        if (Current.EncryptionExtensions.Contains(ext))
+            Current.EncryptionExtensions.Remove(ext);
+        else
+            Current.EncryptionExtensions.Add(ext);
+
+        Save();
+    }
+
+    public void UpdateBusinessSoftware(string name)
+    {
+        Current.BusinessSoftware = name;
+        Save();
+    }
 }

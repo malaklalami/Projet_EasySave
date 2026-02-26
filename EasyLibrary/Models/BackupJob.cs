@@ -12,6 +12,12 @@ public class BackupJob
     public string SourceDir { get; set; } = string.Empty;
     public string TargetDir { get; set; } = string.Empty;
 
+    [JsonIgnore] // On ne veut pas forcément le garder dans le JSON au redémarrage
+    public bool IsPaused { get; set; } = false;
+
+    [JsonIgnore]
+    public bool IsStopped { get; set; } = false;
+
     [JsonConverter(typeof(JsonStringEnumConverter))] // Pour lire "Full" ou "Differential" dans le JSON
     public BackupType Type { get; set; } = BackupType.Full;
 }

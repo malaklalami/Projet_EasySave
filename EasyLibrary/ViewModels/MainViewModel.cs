@@ -67,20 +67,28 @@ public class MainViewModel
         if (jobsToRun.Any())
         {
             // On réinitialise les signaux de contrôle avant de partir
-            JobControlService.IsStopped = false;
-            JobControlService.IsPaused = false;
+            JobControlService.Reset();
 
-            // Lancement du moteur
-            await _backup.Execute(jobsToRun);
+            // On utilise AddJobs au lieu de Execute
+            _backup.AddJobs(jobsToRun);
+            await Task.CompletedTask;
         }
     }
 
     // --- MÉTHODES DE CONTRÔLE (V3) ---
 
-    public void PauseAll() => JobControlService.Pause();
-    public void ResumeAll() => JobControlService.Resume();
-    public void StopAll() => JobControlService.Stop();
+    public void PauseAll() => JobControlService.PauseAll();
+    public void ResumeAll() => JobControlService.ResumeAll(Jobs);
 
+    public void StopAll()
+    {
+        JobControlService.StopAll();
+        _backup.ForcePulse();
+    }
+
+    public void PauseJob(BackupJob job) => JobControlService.Pause(job);
+    public void ResumeJob(BackupJob job) => JobControlService.Resume(job);
+    public void StopJob(BackupJob job) => JobControlService.Stop(job);
     // --- GESTION DES TRAVAUX (CRUD) ---
 
     public void AddJob(string name, string src, string dest, BackupType type)
@@ -94,7 +102,8 @@ public class MainViewModel
             Name = name,
             SourceDir = src,
             TargetDir = dest,
-            Type = type
+            Type = type,
+            IsPaused = false
         };
 
         Jobs.Add(job);
@@ -130,22 +139,9 @@ public class MainViewModel
         _config.Save();
     }
 
-    public void ManageEncryptionExtensions(string ext)
-    {
-        if (string.IsNullOrWhiteSpace(ext)) return;
-        if (!ext.StartsWith(".")) ext = "." + ext;
+    public void ManageEncryptionExtensions(string ext) => _config.ManageEncryptionExtension(ext);
 
-        if (Settings.EncryptionExtensions.Contains(ext))
-            Settings.EncryptionExtensions.Remove(ext);
-        else
-            Settings.EncryptionExtensions.Add(ext);
 
-        _config.Save();
-    }
+    public void UpdateBusinessSoftware(string name) => _config.UpdateBusinessSoftware(name);
 
-    public void UpdateBusinessSoftware(string name)
-    {
-        Settings.BusinessSoftware = name;
-        _config.Save();
-    }
 }

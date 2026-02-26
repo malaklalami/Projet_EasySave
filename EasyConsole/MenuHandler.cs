@@ -23,9 +23,21 @@ public class MenuHandler
             string input = Console.ReadLine()?.ToLower() ?? "";
 
             // Gestion des commandes de contrôle direct
-            if (input.StartsWith("pause")) { _vm.PauseAll(); Console.WriteLine(_vm.LanguageService.Get("All_Jobs_Paused")); Thread.Sleep(1000); continue; }
-            if (input.StartsWith("resume")) { _vm.ResumeAll(); Console.WriteLine(_vm.LanguageService.Get("All_Jobs_Resumed")); Thread.Sleep(1000); continue; }
-            if (input.StartsWith("stop")) { _vm.StopAll(); Console.WriteLine(_vm.LanguageService.Get("All_Jobs_Stopped")); Thread.Sleep(1000); continue; }
+if (input.StartsWith("pause")) 
+        { 
+            HandleControlCommand(input, "pause"); // <--- Appel d'une méthode d'aide
+            continue; 
+        }
+        if (input.StartsWith("resume")) 
+        { 
+            HandleControlCommand(input, "resume"); // <--- Appel d'une méthode d'aide
+            continue; 
+        }
+        if (input.StartsWith("stop")) 
+        { 
+            HandleControlCommand(input, "stop"); // <--- Appel d'une méthode d'aide
+            continue; 
+        }
 
             switch (input)
             {
@@ -119,6 +131,56 @@ public class MenuHandler
         string soft = Console.ReadLine() ?? "";
         _vm.UpdateBusinessSoftware(soft);
         Console.WriteLine(_vm.LanguageService.Get("Action_Success"));
+        Thread.Sleep(1000);
+    }
+    private void HandleControlCommand(string input, string type)
+    {
+        var parts = input.Split(' ');
+
+        // 1. CAS GLOBAL : Commande "pause", "resume" ou "stop" toute seule
+        if (parts.Length == 1)
+        {
+            if (type == "pause")
+            {
+                _vm.PauseAll();
+                Console.WriteLine(_vm.LanguageService.Get("All_Jobs_Paused")); // <--- Ta clé exacte
+            }
+            else if (type == "resume")
+            {
+                _vm.ResumeAll();
+                Console.WriteLine(_vm.LanguageService.Get("All_Jobs_Resumed")); // <--- Ta clé exacte
+            }
+            else if (type == "stop")
+            {
+                _vm.StopAll();
+                Console.WriteLine(_vm.LanguageService.Get("All_Jobs_Stopped")); // <--- Ta clé exacte
+            }
+        }
+        // 2. CAS INDIVIDUEL : Commande "pause 1", etc.
+        else if (parts.Length == 2 && int.TryParse(parts[1], out int id) && id >= 0 && id < _vm.Jobs.Count)
+        {
+            var job = _vm.Jobs[id];
+            if (type == "pause")
+            {
+                _vm.PauseJob(job);
+                Console.WriteLine($"{_vm.LanguageService.Get("Job_Paused")} : {job.Name}");
+            }
+            else if (type == "resume")
+            {
+                _vm.ResumeJob(job);
+                Console.WriteLine($"{_vm.LanguageService.Get("Job_Resumed")} : {job.Name}");
+            }
+            else if (type == "stop")
+            {
+                _vm.StopJob(job);
+                Console.WriteLine($"{_vm.LanguageService.Get("Job_Stopped")} : {job.Name}");
+            }
+        }
+        else
+        {
+            Console.WriteLine(_vm.LanguageService.Get("Invalid_Choice"));
+        }
+
         Thread.Sleep(1000);
     }
 }

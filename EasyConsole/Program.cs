@@ -16,8 +16,10 @@ class Program
             // Mode Automatique (ex: EasySave.exe 1-3)
             Console.WriteLine($"--- Mode Automatique : {args[0]} ---");
             await viewModel.ExecuteSelection(args[0]);
+            Console.WriteLine("\nSauvegarde lancée en arrière-plan...");
             Console.WriteLine("\nAppuyez sur une touche pour quitter.");
             Console.ReadKey();
+            viewModel.StopAll();
         }
         else
         {

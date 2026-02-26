@@ -36,7 +36,7 @@ namespace EasySave.Services
                         
                         WorkingDirectory = Path.GetDirectoryName(_path),
                         
-                        RedirectStandardOutput = false, // On désactive pour éviter les blocages de buffer
+                        RedirectStandardOutput = true, // On désactive pour éviter les blocages de buffer
                         RedirectStandardError = false
                     };
 
