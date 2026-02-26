@@ -1,258 +1,144 @@
-﻿using System;
-using System.IO;
-using System.Diagnostics;
+﻿using EasySave.Core;
 using EasySave.Models;
-using EasySave.Core;
-using System.Threading.Tasks;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
-
-// Orchestrateur principal qui gère l'exécution, la mise en pause et l'arrêt des sauvegardes.
-// Contrôle le parallélisme, la priorité des fichiers et la sécurité (chiffrement et logiciels métiers).
+using System.Threading.Tasks;
 
 namespace EasySave.Services;
 
 public class BackupService
 {
     private readonly ConfigService _config;
-    private readonly LoggerService _logger = new();
     private readonly CryptoService _crypto;
-    private readonly BusinessSoftwareMonitor _monitor;
+    private readonly LoggerService _logger = new();
 
-    private readonly SemaphoreSlim _largeFileSemaphore = new(1, 1);
-    private readonly ManualResetEventSlim _pauseEvent = new(true);
-    private CancellationTokenSource _cts = new();
-    private int _globalPriorityFilesCount = 0;
+    // Les 4 listes imposées par la logique de priorité
+    private readonly Queue<FileTask> _prioSmall = new(), _prioLarge = new(), _nonPrioSmall = new(), _nonPrioLarge = new();
+    private readonly object _lock = new();
+    private int _totalFiles, _processedFiles;
+
+    public event Action<BackupState>? OnProgress;
 
     public BackupService(ConfigService config, CryptoService crypto)
     {
         _config = config;
         _crypto = crypto;
-        _monitor = new BusinessSoftwareMonitor(_config, _logger);
     }
 
-    public void PauseAll() => _pauseEvent.Reset();
-    public void ResumeAll() => _pauseEvent.Set();
-    public void StopAll() => _cts.Cancel();
+    private record FileTask(string Source, string Dest, BackupJob Job);
 
-    public void PauseJob(BackupJob job) => job.PauseEvent.Reset();
-    public void ResumeJob(BackupJob job) => job.PauseEvent.Set();
-    public void StopJob(BackupJob job) => job.JobCts.Cancel();
-
-    public event Action<BackupState> OnProgress;
-
-    public async Task Execute(List<BackupJob> jobs, Action<BackupState> onProgress)
+    public async Task Execute(List<BackupJob> jobs)
     {
-        lock (this)
+        _processedFiles = 0;
+        Md5Service.LoadCache();
+
+        // 1. PREPROCESSING (Le tri)
+        PrepareQueues(jobs);
+        if (_totalFiles == 0) return;
+
+        // 2. THREAD POOL (L'exécution parallèle V3)
+        var workers = Enumerable.Range(0, _config.Current.MaxParallelFiles)
+                                .Select(_ => Task.Run(WorkerLoop)).ToList();
+
+        await Task.WhenAll(workers);
+        Md5Service.SaveCache();
+    }
+
+    private void PrepareQueues(List<BackupJob> jobs)
+    {
+        lock (_lock)
         {
-            if (_cts.IsCancellationRequested) _cts = new CancellationTokenSource();
-        }
-        _pauseEvent.Set();
-
-        using var tcpLogger = await InitializeTcpLogger();
-        var sortedTasks = PrepareTasks(jobs, onProgress);
-
-        int processedCount = 0;
-        var options = new ParallelOptions { MaxDegreeOfParallelism = _config.Current.MaxParallelFiles };
-
-        await Parallel.ForEachAsync(sortedTasks, options, async (task, ct) =>
-        {
-            await ProcessSingleFile(task, tcpLogger, (fileName) =>
+            _prioSmall.Clear(); _prioLarge.Clear(); _nonPrioSmall.Clear(); _nonPrioLarge.Clear();
+            foreach (var job in jobs)
             {
-                int current = Interlocked.Increment(ref processedCount);
-                var state = new BackupState
+                if (!Directory.Exists(job.SourceDir)) continue;
+                foreach (var f in Directory.GetFiles(job.SourceDir, "*.*", SearchOption.AllDirectories))
                 {
-                    JobName = task.Job.Name,
-                    Status = JobState.Active,
-                    Progress = sortedTasks.Count > 0 ? (double)current / sortedTasks.Count * 100 : 100,
-                    CurrentFile = fileName
-                };
-                onProgress?.Invoke(state);
-                OnProgress?.Invoke(state);
-            }, onProgress);
-        });
-    }
+                    string dest = f.Replace(job.SourceDir, job.TargetDir);
+                    // On n'ajoute que si MD5 a changé (Logique différentielle)
+                    if (job.Type == BackupType.Differential && !Md5Service.HasChanged(job.Name, f, Md5Service.GetHash(f))) continue;
 
-    private async Task ProcessSingleFile((string FilePath, BackupJob Job, bool IsPriority) task, PersistentTcpLogger? tcpLogger, Action<string> reportProgress, Action<BackupState> onProgress)
-    {
-        try
-        {
-            _pauseEvent.Wait();
-            task.Job.PauseEvent.Wait();
-            if (_cts.Token.IsCancellationRequested) return;
-
-            _monitor.CheckActivity(task.Job.Name, onProgress);
-
-            string dest = task.FilePath.Replace(task.Job.SourceDir, task.Job.TargetDir);
-            Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
-            FileInfo fi = new FileInfo(task.FilePath);
-
-            bool isLarge = await ApplyConstraints(task, fi, onProgress);
-
-            try
-            {
-                var sw = Stopwatch.StartNew();
-
-                // On passe le token pour annuler la copie si possible
-                await Task.Run(() => File.Copy(task.FilePath, dest, true), _cts.Token);
-
-                // Double check après la copie avant de lancer le chiffrement
-                if (_cts.Token.IsCancellationRequested) return;
-
-                long cryptTime = ExecuteEncryptionIfRequired(dest);
-
-                sw.Stop();
-                LogExecution(task, dest, fi.Length, sw.ElapsedMilliseconds, cryptTime, tcpLogger);
-                reportProgress(Path.GetFileName(task.FilePath));
-            }
-            finally
-            {
-                ReleaseConstraints(task, isLarge);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // Stop détecté : on sort silencieusement
-        }
-    }
-
-    private List<(string FilePath, BackupJob Job, bool IsPriority)> PrepareTasks(List<BackupJob> jobs, Action<BackupState> onProgress)
-    {
-        var tasks = new List<(string FilePath, BackupJob Job, bool IsPriority)>();
-        foreach (var job in jobs)
-        {
-            job.JobCts = new CancellationTokenSource();
-            job.PauseEvent.Set();
-            _monitor.CheckActivity(job.Name, onProgress, true);
-
-            try
-            {
-                var files = Directory.GetFiles(job.SourceDir, "*.*", SearchOption.AllDirectories);
-                foreach (var f in files)
-                {
-                    // On calcule le chemin de destination pour pouvoir comparer
-                    string relativePath = Path.GetRelativePath(job.SourceDir, f);
-                    string dest = Path.Combine(job.TargetDir, relativePath);
-
-                    // LOGIQUE DIFFÉRENTIELLE ICI
-                    if (job.Type == BackupType.Differential && File.Exists(dest))
-                    {
-                        FileInfo fiSource = new FileInfo(f);
-                        FileInfo fiDest = new FileInfo(dest);
-
-                        // Si le fichier source n'est pas plus récent, on l'ignore (on ne l'ajoute pas à la liste)
-                        if (fiSource.LastWriteTime <= fiDest.LastWriteTime)
-                        {
-                            continue;
-                        }
-                    }
-                    bool priority = _config.Current.PriorityExtensions.Any(ext => f.EndsWith(ext, StringComparison.OrdinalIgnoreCase));
-                    if (priority) Interlocked.Increment(ref _globalPriorityFilesCount);
-                    tasks.Add((f, job, priority));
+                    Dispatch(f, dest, job);
                 }
             }
-            catch (Exception)
-            {
-                // Erreur d'énumération des fichiers, on continue
-            }
-        }
-        return tasks.OrderByDescending(t => t.IsPriority).ThenBy(t => Guid.NewGuid()).ToList();
-    }
-
-    private async Task<bool> ApplyConstraints((string FilePath, BackupJob Job, bool IsPriority) task, FileInfo fi, Action<BackupState> onProgress)
-    {
-        if (!task.IsPriority)
-        {
-            while (Interlocked.CompareExchange(ref _globalPriorityFilesCount, 0, 0) > 0)
-            {
-                await Task.Delay(500);
-                _pauseEvent.Wait();
-                if (_cts.Token.IsCancellationRequested) return false;
-            }
-        }
-
-        bool isLarge = fi.Length > _config.Current.LargeFileThreshold;
-        if (isLarge)
-        {
-            onProgress?.Invoke(new BackupState { JobName = task.Job.Name, Status = JobState.Waiting, CurrentFile = fi.Name });
-            try
-            {
-                await _largeFileSemaphore.WaitAsync(_cts.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                return false;
-            }
-        }
-        return isLarge;
-    }
-
-    private void ReleaseConstraints((string FilePath, BackupJob Job, bool IsPriority) task, bool isLarge)
-    {
-        if (task.IsPriority) Interlocked.Decrement(ref _globalPriorityFilesCount);
-        if (isLarge)
-        {
-            try 
-            { 
-                _largeFileSemaphore.Release(); 
-            } 
-            catch (ObjectDisposedException) 
-            { 
-                // Semaphore déjà disposé, ignorer
-            }
-            catch (InvalidOperationException)
-            {
-                // Release appelé sans Wait correspondant, ignorer
-            }
+            _totalFiles = _prioSmall.Count + _prioLarge.Count + _nonPrioSmall.Count + _nonPrioLarge.Count;
         }
     }
 
-    private long ExecuteEncryptionIfRequired(string destPath)
+    private void WorkerLoop()
     {
-        string ext = Path.GetExtension(destPath).ToLower();
-        if (_config.Current.EncryptionExtensions.Any(e => e.Equals(ext, StringComparison.OrdinalIgnoreCase)))
+        while (!JobControlService.IsStopped) // Condition d'arrêt ultra simple
         {
-            return _crypto.Encrypt(destPath);
+            FileTask? task = null;
+            lock (_lock)
+            {
+                if (_prioSmall.Count > 0) task = _prioSmall.Dequeue();
+                else if (_prioLarge.Count > 0) task = _prioLarge.Dequeue();
+                else if (_nonPrioSmall.Count > 0) task = _nonPrioSmall.Dequeue();
+                else if (_nonPrioLarge.Count > 0) task = _nonPrioLarge.Dequeue();
+            }
+
+            if (task == null) break;
+            ProcessFile(task);
         }
-        return 0;
     }
 
-    private void LogExecution((string FilePath, BackupJob Job, bool IsPriority) task, string dest, long size, long time, long cryptoTime, PersistentTcpLogger? tcp)
+    private void ProcessFile(FileTask task)
     {
-        var entry = new LogEntry
-        {
-            JobName = task.Job.Name,
-            Source = task.FilePath,
-            Target = dest,
-            FileSize = size,
-            TransferTimeMs = time,
-            EncryptionTimeMs = cryptoTime
-        };
-        _logger.Write(entry, _config.Current.LogFormat == LogFormat.Json);
-        tcp?.SendLog(entry);
-    }
+        // On met à jour l'état de la pause en fonction du logiciel métier
+        _monitor.UpdateControlState();
 
-    private async Task<PersistentTcpLogger?> InitializeTcpLogger()
-    {
+        // On utilise la "douane" de la télécommande qu'on a faite avant
+        JobControlService.WaitIfPaused();
+
+        if (JobControlService.IsStopped) return;
+        // 1. On passe par la douane : si c'est sur pause, on s'arrête ici
+        JobControlService.WaitIfPaused();
+
+        // 2. Si on a cliqué sur Stop, on sort tout de suite
+        if (JobControlService.IsStopped) return;
+
         try
         {
-            var logger = new PersistentTcpLogger();
-            await logger.ConnectAsync(_config.Current.RemoteIp);
-            return logger;
+            Directory.CreateDirectory(Path.GetDirectoryName(task.Dest)!);
+            File.Copy(task.Source, task.Dest, true);
+
+            // Chiffrement (toujours avec la vérification Stop/Pause entre chaque étape)
+            if (_config.Current.EncryptionExtensions.Any(e => task.Dest.EndsWith(e)))
+            {
+                JobControlService.WaitIfPaused();
+                if (JobControlService.IsStopped) return;
+                _crypto.Encrypt(task.Dest);
+            }
+
+            FinalizeFile(task);
         }
-        catch { return null; }
+        catch { }
     }
 
-    public void UpdateJobInList(List<BackupJob> jobs, int index, string n, string s, string t, BackupType ty)
+    private void Dispatch(string s, string d, BackupJob j)
     {
-        if (index >= 0 && index < jobs.Count)
+        bool prio = _config.Current.PriorityExtensions.Any(e => s.EndsWith(e));
+        bool large = new FileInfo(s).Length > (_config.Current.LargeFileThreshold * 1024);
+        if (prio) { if (large) _prioLarge.Enqueue(new(s, d, j)); else _prioSmall.Enqueue(new(s, d, j)); }
+        else { if (large) _nonPrioLarge.Enqueue(new(s, d, j)); else _nonPrioSmall.Enqueue(new(s, d, j)); }
+    }
+    private void NotifyProgress(FileTask task)
+    {
+        // On crée l'état instantané
+        var state = new BackupState
         {
-            var job = jobs[index];
-            job.Name = n; job.SourceDir = s; job.TargetDir = t; job.Type = ty;
-            job.PauseEvent.Set();
-        }
+            JobId = task.Job.Id, // On utilise l'ID
+            Status = JobState.Active,
+            LastUpdate = DateTime.Now,
+            // On filtre la file d'attente pour savoir ce qu'il reste
+            // (C'est ici que la magie opère)
+            FilesToCopy = GetRemainingFilesForJob(task.Job.Id)
+        };
+
+        OnProgress?.Invoke(state);
     }
 }
-
-

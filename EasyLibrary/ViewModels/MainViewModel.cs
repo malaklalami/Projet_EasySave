@@ -1,16 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using EasyLibrary.Core;
+using EasySave.Core;
 using EasySave.Models;
 using EasySave.Services;
-using EasySave.Core;
-using static System.Reflection.Metadata.BlobBuilder;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
-namespace EasyLibrary.ViewModels;
-
-// Fait le lien entre l'interface utilisateur et la logique métier en coordonnant tous les services.
+namespace EasySave.ViewModels;
 
 public class MainViewModel
 {
@@ -19,206 +18,72 @@ public class MainViewModel
     private readonly BackupService _backup;
     private readonly BusinessSoftwareWatcher _watcher;
 
-    public Action<string>? DisplayMessage { get; set; }
-
-  //piste:  public LanguageService LanguageService { get; } = new();
-   //piste: public ErrorService ErrorService { get; private set; }
-
-    // Propriété utilisée par SettingsUI
     public Settings Settings => _config.Current;
-    public Action<BackupState>? OnProgressUpdate { get; set; }
     public ObservableCollection<BackupJob> Jobs { get; }
-
-   //piste: public double ProgressPercentage { get; private set; }
-
-  //piste:  public Action<Action> UIWrapper { get; set; } = (a) => { a(); };
+    public Action<BackupState>? OnProgressUpdate { get; set; }
 
     public MainViewModel()
     {
-        // 1. Chargement de la configuration et de la langue
+        // 1. Chargement
         _config.Load();
-      //piste:  LanguageService.Load(Settings.Language);
-      //piste:  ErrorService = new(LanguageService);
         Jobs = new ObservableCollection<BackupJob>(_manager.Load());
 
-        // 2. Préparation du chemin vers CryptoSoft 
+        // 2. Setup CryptoSoft
         string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-        string cryptoExeName = OperatingSystem.IsWindows() ? "CryptoSoft.exe" : "CryptoSoft";
-        string cryptoFullPath = Path.Combine(baseDir, cryptoExeName);
+        string cryptoExe = OperatingSystem.IsWindows() ? "CryptoSoft.exe" : "CryptoSoft";
+        var cryptoService = new CryptoService(Path.Combine(baseDir, cryptoExe), "MY_KEY");
 
-        // 3. Initialisation UNIQUE du service de cryptage
-        var cryptoServiceInstance = new CryptoService(cryptoFullPath, "MY_KEY");
+        // 3. Setup Moteur de Backup
+        _backup = new BackupService(_config, cryptoService);
+        _backup.OnProgress += (state) => OnProgressUpdate?.Invoke(state);
 
-        // 4. Initialisation du service de backup avec l'instance de cryptage
-        _backup = new BackupService(_config, cryptoServiceInstance);
-       //piste: _backup.OnProgress += (state) =>
-        {
-       //piste     UIWrapper(() =>
-            //{
-          //piste      ProgressPercentage = state.Progress;
-            //});
-        };
-
-        // 5. Lancement du watcher de logiciel métier
+        // 4. Setup Surveillance Logiciel Métier
         _watcher = new BusinessSoftwareWatcher(_config);
-        InitializeWatcher();
-    }
-
-
-    private void InitializeWatcher()
-    {
-        _watcher.OnSoftwareDetected = () =>
-        {
-            // 1. On bloque la sauvegarde
-            _backup.PauseAll();
-
-            // 2. On utilise ErrorService pour FORCER l'affichage du popup
-            // On passe le type "BusinessSoftwareActive"
-            ErrorService.Report(ErrorType.BusinessSoftwareActive, Settings.BusinessSoftware);
-        };
-
-        _watcher.OnSoftwareClosed = () =>
-        {
-            // 1. On reprend la sauvegarde
-            _backup.ResumeAll();
-
-            // 2. Simple info de reprise (pas forcément un popup bloquant)
-          //piste:  DisplayMessage?.Invoke(LanguageService.Get("Software_Closed"));
-        };
-
         _watcher.Start();
     }
 
-    private BackupJob? FindJob(string input)
+    // --- PILOTAGE (Lien direct avec tes boutons UI) ---
+
+    public async Task ExecuteSelection(string input)
     {
-        if (int.TryParse(input, out int index))
+        // On récupère les jobs demandés (ex: "1-3")
+        var selectedIndices = JobParser.ParseSelection(input, Jobs.Count);
+        var jobsToRun = selectedIndices.Select(i => Jobs[i]).ToList();
+
+        if (jobsToRun.Any())
         {
-            return (index >= 0 && index < Jobs.Count) ? Jobs[index] : null;
+            await _backup.Execute(jobsToRun);
         }
-        return Jobs.FirstOrDefault(j => j.Name.Equals(input, StringComparison.OrdinalIgnoreCase));
     }
 
-    public void PauseJob(string input)
+    // Méthodes Hyper Simples pour les boutons Pause/Play/Stop
+    public void PauseAll() => JobControlService.Pause();
+    public void ResumeAll() => JobControlService.Resume();
+    public void StopAll() => JobControlService.Stop();
+
+    // --- GESTION DES JOBS ---
+
+    public void AddJob(string name, string src, string dest, BackupType type)
     {
-        var job = FindJob(input);
-        if (job != null) _backup.PauseJob(job);
-    }
-
-    public void ResumeJob(string input)
-    {
-        var job = FindJob(input);
-        if (job != null) _backup.ResumeJob(job);
-    }
-
-    public void StopJob(string input)
-    {
-        var job = FindJob(input);
-        if (job != null) _backup.StopJob(job);
-    }
-
-
-
-    // --- MÉTHODES DE PILOTAGE GLOBAL ---
-    public void PauseAllJobs() => _backup.PauseAll();
-    public void ResumeAllJobs() => _backup.ResumeAll();
-    public void StopAllJobs() => _backup.StopAll();
-
-    // Méthode appelée par SettingsUI
-    public void SaveSettings()
-    {
-        _config.Save();
-    }
-
-    public void AddJob(string n, string s, string t, BackupType ty)
-    {
-        if (string.IsNullOrWhiteSpace(n) || !System.IO.Directory.Exists(s)) return;
-        var job = new BackupJob { Name = n, SourceDir = s, TargetDir = t, Type = ty };
+        int nextId = Jobs.Count > 0 ? Jobs.Max(j => j.Id) + 1 : 1;
+        var job = new BackupJob { Id = nextId, Name = name, SourceDir = src, TargetDir = dest, Type = type };
         Jobs.Add(job);
         _manager.Save(Jobs.ToList());
     }
 
-    public void DeleteJob(int index)
+    public void DeleteJob(BackupJob job)
     {
-        if (index >= 0 && index < Jobs.Count)
-        {
-            Jobs.RemoveAt(index);
-            _manager.Save(Jobs.ToList());
-        }
-    }
-
-    public void ClearAllJobs()
-    {
-        Jobs.Clear();
+        Jobs.Remove(job);
         _manager.Save(Jobs.ToList());
     }
 
-    public void SetLanguage(string langCode)
+    // --- CONFIGURATION ---
+
+    public void SaveSettings() => _config.Save();
+
+    public void UpdateLanguage(string lang)
     {
-        Settings.Language = langCode;
+        Settings.Language = lang;
         _config.Save();
-      //piste:  LanguageService.Load(langCode);
-    }
-
-    public void SwitchLogFormat()
-    {
-        Settings.LogFormat = (Settings.LogFormat == LogFormat.Json)
-            ? LogFormat.Xml
-            : LogFormat.Json;
-        _config.Save();
-    }
-
-
-    public void ManageEncryptionExtensions(string extension)
-    {
-        if (string.IsNullOrWhiteSpace(extension)) return;
-
-        extension = extension.Trim().ToLower();
-        if (!extension.StartsWith(".")) extension = "." + extension;
-
-
-        if (!Settings.EncryptionExtensions.Contains(extension))
-        {
-            Settings.EncryptionExtensions.Add(extension);
-            _config.Save();
-        }
-    }
-
-    public void UpdateBusinessSoftware(string name)
-    {
-        Settings.BusinessSoftware = name;
-        _config.Save();
-    }
-
-    public void UpdateJob(int index, string n, string s, string t, BackupType ty)
-    {
-        // 1. On demande au service de modifier l'objet dans la liste
-        _backup.UpdateJobInList(Jobs.ToList(), index, n, s, t, ty);
-
-        // 2. On force la mise à jour visuelle (au cas où)
-        var updatedJob = Jobs[index];
-        // Optionnel : on peut notifier ici si nécessaire
-
-        // 3. On enregistre les modifications dans le fichier JSON
-        _manager.Save(Jobs.ToList());
-    }
-
-
-
-    public async Task Execute(string input)
-    {
-        // On transforme le texte en liste de travaux (Étape 1 du BackupService)
-        var selected = JobParser.ParseSelection(input, Jobs.Count);
-        if (!selected.Any()) return;
-        var jobsToRun = selected.Select(i => Jobs[i]).ToList();
-
-        // ON PASSE LE RELAIS AU BACKUPSERVICE 
-        // - On lui donne la liste (jobsToRun)
-        // - On lui donne la fonction pour qu'il nous renvoie l'état en direct
-        await _backup.Execute(jobsToRun, (BackupState state) =>
-        {
-            OnProgressUpdate?.Invoke(state);
-        });
     }
 }
-
-

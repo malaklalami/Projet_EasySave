@@ -1,12 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace EasySave.Core;
 
-namespace EasyLibrary.Core
+public enum BackupType
 {
-    internal class Backuptype
-    {
-    }
+    Full,
+    Differential
 }

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace EasySave.Core;
+namespace EasyLibrary.Core;
 
 public static class JobParser
 {

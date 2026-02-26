@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace EasySave.Core;
 
-namespace EasyLibrary.Core
+public enum JobState
 {
-    internal class Jobstate
-    {
-    }
+    Inactive,
+    Active,
+    Paused,
+    Waiting
 }

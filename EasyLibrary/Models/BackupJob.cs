@@ -5,10 +5,13 @@ namespace EasySave.Models;
 
 public class BackupJob
 {
+    // Ajout de l'ID pour la V3 (Essentiel pour le parallélisme et le fichier d'état)
+    public int Id { get; set; }
+
     public string Name { get; set; } = string.Empty;
     public string SourceDir { get; set; } = string.Empty;
     public string TargetDir { get; set; } = string.Empty;
-    public BackupType Type { get; set; } = BackupType.Full;
 
+    [JsonConverter(typeof(JsonStringEnumConverter))] // Pour lire "Full" ou "Differential" dans le JSON
+    public BackupType Type { get; set; } = BackupType.Full;
 }
-//Contient uniquement les paramètres d'un travail (Nom, Dossier Source, Dossier Cible, Type) c ce qui est stocké dans jobs.json
