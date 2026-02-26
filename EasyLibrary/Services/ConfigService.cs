@@ -1,9 +1,6 @@
 ﻿using EasySave.Models;
 using System;
-using System.Collections.Generic;
-using System.Data;
 using System.IO;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -14,16 +11,17 @@ public class ConfigService
     private readonly string _path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.json");
     private Settings? _cache;
 
-    // 1. On centralise les options pour qu'elles soient identiques en lecture et écriture
+    // PISTE ACTIVÉE : Permet de prévenir l'UI ou le moteur quand on change un réglage
+    public event Action? OnSettingsChanged;
+
     private readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
         WriteIndented = true,
-        Converters = { new JsonStringEnumConverter() } // Transforme les chiffres en texte (ex: "Json")
+        Converters = { new JsonStringEnumConverter() }
     };
 
     public Settings Current => _cache ?? Load();
-   //piste: public event Action? OnSettingsChanged;
 
     public Settings Load()
     {
@@ -35,13 +33,11 @@ public class ConfigService
         {
             try
             {
-                // 2. On utilise les options pour lire
                 _cache = JsonSerializer.Deserialize<Settings>(File.ReadAllText(_path), _jsonOptions) ?? new Settings();
             }
             catch
             {
-                // 3. Sécurité : Si le fichier JSON est corrompu/illisible, on évite le crash et on met les valeurs par défaut
-                _cache = new Settings();
+                _cache = new Settings(); // Sécurité anti-crash si le JSON est mal écrit
             }
         }
         return _cache;
@@ -49,10 +45,11 @@ public class ConfigService
 
     public void Save()
     {
-        // 4. On utilise les mêmes options pour sauvegarder !
+        // Sauvegarde physique sur le disque
         File.WriteAllText(_path, JsonSerializer.Serialize(_cache, _jsonOptions));
+
+        // ON PRÉVIENT LES AUTRES : 
+        // Si quelqu'un écoute (l'UI par exemple), on lance l'alerte
+        OnSettingsChanged?.Invoke();
     }
 }
-//Centralise la lecture et l'écriture des paramètres utilisateurs dans un fichier JSON.
-//Assure la persistance des réglages(langue, extensions, IP) avec un système de cache pour optimiser les performances.
-//Garantit la stabilité de l'application via une gestion d'erreurs automatique en cas de fichier corrompu.
