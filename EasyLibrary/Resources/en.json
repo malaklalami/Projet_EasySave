@@ -9,9 +9,34 @@
   "Menu_Option7": "7. Clear all jobs",
   "Menu_Option8": "8. Configure encryption extensions",
   "Menu_Option9": "9. Configure business software",
+  "Menu_Option10": "10. Configure Log's' target destination",
+  "Menu_Option_Pause": "PAUSE  : Type 'pause' for (all) or 'pause [id]' (ex: pause 1)",
+  "Menu_Option_Resume": "RESUME : Type 'resume' for (all) or 'resume [id]'",
+  "Menu_Option_Stop": "STOP   : Type 'stop' for (all) or 'stop [id]'",
   "Menu_Quit": "q. Quit",
 
+  "Input_Type_Options": "(Type 0 or Full / 1 or Differential)",
+
+  "Lang_Menu_Title": "--- Language Selection ---",
+  "Lang_Option_En": "1. English",
+  "Lang_Option_Fr": "2. French",
   "Lang_Back": "b. Back",
+  "Lang_Confirm_En": "Language changed to English!",
+  "Lang_Confirm_Fr": "Language changed to French!",
+
+  "Ext_Menu_Title": "--- Encryption Extensions Management ---",
+  "Ext_Option_Add": "1. Add an extension",
+  "Ext_Option_Clear": "2. Clear the list",
+  "Soft_Menu_Title": "--- Business Software Management ---",
+  "Soft_Option_Update": "1. Update software",
+  "Soft_Option_Delete": "2. Delete current software",
+  "Action_Success": "Operation successful!",
+  "Current_Extensions": "Current extensions: {0}",
+  "No_Extensions": "No extensions configured.",
+  "Current_Software": "Current business software: {0}",
+  "No_Software": "No business software configured.",
+  "Manage_Instructions_Ext": "Enter an extension to add or remove (e.g. .pdf):",
+  "Manage_Instructions_Soft": "Enter software name (e.g. Calculator):",
 
   "Job_List_Title": "--- Jobs List ---",
   "Job_List_Empty": "No jobs configured.",
@@ -37,12 +62,30 @@
 
   "Run_Title": "--- Run a backup ---",
   "Run_Input": "Enter number(s) (ex: 1, 0-3, 1;3) : ",
-  "Run_Finished": "Execution finished.",
+  "Run_Finished": "Succes :Execution finished.",
+  "Run_Started": "Starting jobs...",
 
   "Success_Finished": "Success: {0} finished.",
   "Error_SourceNotFound": "[ERROR] Source directory not found: {0}",
   "Error_Global": "[ERROR] Could not execute {0}. Invalid path or protected area.",
   "Msg_LangChanged": "Language changed!",
   "Msg_LogFormatChanged": "Log format changed: ",
-  "Msg_AllJobsDeleted": ">>>> All jobs have been deleted."
+  "Msg_AllJobsDeleted": ">>>> All jobs have been deleted.",
+
+  "Software_Detected": "[MONITOR] Business software detected! Auto-pause activated...",
+  "Software_Closed": "[MONITOR] Business software closed. Resuming backup...",
+  "Status_Waiting": "[WAITING - Large file]",
+  "Status_Paused": "[PAUSED] Backup is temporarily stopped.",
+  "Status_Resumed": "[RESUMED] Backup is restarting.",
+  "Job_Paused": "Job paused",
+  "Job_Resumed": "Job resumed",
+  "Job_Stopped": "Job stopped",
+  "All_Jobs_Paused": "All jobs have been paused.",
+  "All_Jobs_Resumed": "All jobs have been resumed.",
+  "All_Jobs_Stopped": "All jobs have been stopped.",
+
+  "Title_Alert": "System Alert",
+  "Error_DiskFull": "Insufficient disk space on drive: {0}",
+  "Error_AccessDenied": " Access denied for file: {0}. Check permissions.",
+  "Error_Unknown": " Unexpected error: {0}"
 }

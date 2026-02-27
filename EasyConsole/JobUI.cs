@@ -1,113 +1,108 @@
-﻿using EasySave.Core;
-using EasyLibrary.ViewModels;
+﻿
 using EasySave.Core;
-
+using EasySave.Models;
+using EasySave.ViewModels;
 
 namespace EasyConsole;
 
 public class JobUI
 {
     private readonly MainViewModel _vm;
-
     public JobUI(MainViewModel vm) => _vm = vm;
 
     public void CreateJob()
     {
-        Console.WriteLine($"\n{_vm.Language.Get("Create_Title")}");
+        Console.WriteLine($"\n{_vm.LanguageService.Get("Create_Title")}");
 
-
-        Console.Write(_vm.Language.Get("Input_JobName"));
+        Console.Write(_vm.LanguageService.Get("Input_JobName"));
         string name = Console.ReadLine() ?? "";
 
-        Console.Write(_vm.Language.Get("Input_SourcePath"));
+        Console.Write(_vm.LanguageService.Get("Input_SourcePath"));
         string source = Console.ReadLine() ?? "";
-        if (!Directory.Exists(source) && !string.IsNullOrWhiteSpace(source))
-            Console.WriteLine(_vm.Language.Get("Error_DirNotExists"));
 
-        Console.Write(_vm.Language.Get("Input_TargetPath"));
+        Console.Write(_vm.LanguageService.Get("Input_TargetPath"));
         string target = Console.ReadLine() ?? "";
 
-        Console.Write(_vm.Language.Get("Input_Type"));
-        Enum.TryParse(Console.ReadLine(), out BackupType type);
+        Console.Write($"{_vm.LanguageService.Get("Input_Type")} {_vm.LanguageService.Get("Input_Type_Options")} : ");
+        BackupType type = (Console.ReadLine() == "1") ? BackupType.Differential : BackupType.Full;
 
-        try
-        {
-            _vm.AddJob(name, source, target, type);
-            Console.WriteLine(_vm.Language.Get("Create_Success"));
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error: {ex.Message}");
-        }
+        _vm.AddJob(name, source, target, type);
+        Console.WriteLine(_vm.LanguageService.Get("Create_Success"));
+        Thread.Sleep(1000);
     }
 
     public void ExecuteSelection()
     {
-        Console.WriteLine($"\n{_vm.Language.Get("Run_Title")}");
-
-        Console.Write(_vm.Language.Get("Run_Input"));
+        Console.WriteLine($"\n{_vm.LanguageService.Get("Run_Title")}");
+        Console.Write(_vm.LanguageService.Get("Run_Input"));
         string input = Console.ReadLine() ?? "";
 
-        // On lance l'exécution via le contrôleur
-        _vm.Execute(input);
+        Console.WriteLine($"\n>>> {_vm.LanguageService.Get("Run_Started")}");
+         _vm.ExecuteSelection(input);
+        Console.WriteLine($"\n<<< {_vm.LanguageService.Get("Run_Finished")}");
 
-        Console.WriteLine(_vm.Language.Get("Run_Finished"));
+        Console.WriteLine("\nAppuyez sur une touche pour revenir au menu...");
+        Console.ReadKey();
+
     }
 
     public void DeleteJob()
     {
-        Console.Write(_vm.Language.Get("Delete_Select"));
-        if (int.TryParse(Console.ReadLine(), out int index) && index >= 0 && index < _vm.Jobs.Count)
+        Console.Write(_vm.LanguageService.Get("Delete_Select"));
+        if (int.TryParse(Console.ReadLine(), out int i) && i >= 0 && i < _vm.Jobs.Count)
         {
-            _vm.DeleteJob(index);
-            Console.WriteLine(_vm.Language.Get("Delete_Success"));
+            var job = _vm.Jobs[i];
+            _vm.DeleteJob(job);
+            Console.WriteLine(string.Format(_vm.LanguageService.Get("Delete_Success"), i, job.Name));
         }
-        else
-        {
-            Console.WriteLine(_vm.Language.Get("Invalid_Choice"));
-        }
+        Thread.Sleep(1000);
     }
 
     public void EditJob()
     {
-        Console.WriteLine($"\n{_vm.Language.Get("Edit_Title")}");
-        Console.Write(_vm.Language.Get("Edit_Select"));
+        Console.Write(_vm.LanguageService.Get("Edit_Select"));
 
-
-        if (int.TryParse(Console.ReadLine(), out int index) && index >= 0 && index < _vm.Jobs.Count)
+        if (int.TryParse(Console.ReadLine(), out int i) && i >= 0 && i < _vm.Jobs.Count)
         {
-            var job = _vm.Jobs[index];
+            var job = _vm.Jobs[i];
+            Console.WriteLine(_vm.LanguageService.Get("Edit_Title"));
 
-            Console.Write($"{_vm.Language.Get("Input_JobName")} [{job.Name}] : ");
-            string name = Console.ReadLine() ?? "";
-            if (string.IsNullOrWhiteSpace(name)) name = job.Name;
+            // 1. Modification du NOM
+            Console.Write($"{_vm.LanguageService.Get("Input_JobName")} [{job.Name}] : ");
+            string inputName = Console.ReadLine() ?? "";
+            string newName = string.IsNullOrWhiteSpace(inputName) ? job.Name : inputName;
 
-            Console.Write($"{_vm.Language.Get("Input_SourcePath")} [{job.SourceDir}] : ");
-            string source = Console.ReadLine() ?? "";
-            if (string.IsNullOrWhiteSpace(source)) source = job.SourceDir;
+            // 2. Modification de la SOURCE
+            Console.Write($"Source [{job.SourceDir}] : ");
+            string inputSrc = Console.ReadLine() ?? "";
+            string newSrc = string.IsNullOrWhiteSpace(inputSrc) ? job.SourceDir : inputSrc;
 
+            // 3. Modification de la DESTINATION
+            Console.Write($"Destination [{job.TargetDir}] : ");
+            string inputDest = Console.ReadLine() ?? "";
+            string newDest = string.IsNullOrWhiteSpace(inputDest) ? job.TargetDir : inputDest;
 
-            Console.Write($"{_vm.Language.Get("Input_TargetPath")} [{job.TargetDir}] : ");
-            string target = Console.ReadLine() ?? "";
-            if (string.IsNullOrWhiteSpace(target)) target = job.TargetDir;
+            // 4. Modification du TYPE (0 = Complet, 1 = Différentiel)
+            Console.Write($"Type (0=Complet, 1=Différentiel) [{(int)job.Type}] : ");
+            string inputType = Console.ReadLine() ?? "";
+            BackupType newType = job.Type; // Par défaut, on garde l'ancien
 
-            Console.Write($"{_vm.Language.Get("Input_Type")} [{(int)job.Type}] : ");
-            string typeInput = Console.ReadLine() ?? "";
-            BackupType type = string.IsNullOrWhiteSpace(typeInput)
-                ? job.Type
-                : (typeInput == "1" ? BackupType.Differential : BackupType.Full);
+            if (!string.IsNullOrWhiteSpace(inputType))
+            {
+                if (inputType == "0") newType = BackupType.Full;
+                else if (inputType == "1") newType = BackupType.Differential;
+            }
 
+            // 5. ON APPELLE LE VIEWMODEL SANS DÉTRUIRE LE JOB !
+            _vm.EditJob(job, newName, newSrc, newDest, newType);
 
-            _vm.DeleteJob(index);
-            _vm.AddJob(name, source, target, type);
-
-
-            Console.WriteLine(string.Format(_vm.Language.Get("Edit_Success"), index, name));
+            Console.WriteLine(string.Format(_vm.LanguageService.Get("Edit_Success"), i, newName));
         }
         else
         {
-            
-            Console.WriteLine(_vm.Language.Get("Invalid_Choice"));
+            Console.WriteLine("Index invalide !"); // Petit message d'erreur si on tape n'importe quoi
         }
+
+        Thread.Sleep(1000);
     }
 }

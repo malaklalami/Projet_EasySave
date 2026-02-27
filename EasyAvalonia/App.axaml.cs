@@ -1,6 +1,7 @@
-using Avalonia;
+﻿using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using EasyAvalonia.Views;
 
 namespace EasyAvalonia;
 
@@ -16,9 +17,9 @@ public partial class App : Avalonia.Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.MainWindow = new MainWindow();
-            //DataContext = new MainViewModel()   is not needed because of the use of the ViewModelLocator in the XAML file, which automatically resolves the MainViewModel for the MainWindow.
         }
-
         base.OnFrameworkInitializationCompleted();
     }
 }
+// Point d'entrée principal de l'application graphique utilisant le framework Avalonia.
+// Initialise les ressources XAML et définit la fenêtre MainWindow comme interface de démarrage pour l'environnement de bureau.

@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Threading;
 using EasySave.Models;
 using EasySave.Core;
 
@@ -7,51 +8,60 @@ namespace EasySave.Services;
 public class BusinessSoftwareMonitor
 {
     private readonly ConfigService _config;
-    private readonly LoggerService _logger;
 
-    public BusinessSoftwareMonitor(ConfigService config, LoggerService logger)
+    public event Action<bool>? OnSoftwareDetectionChanged;
+
+    // Ce flag permet de savoir si la pause actuelle vient du logiciel ou de l'utilisateur
+    private bool _pauseTriggeredByBusinessSoftware = false;
+
+    public BusinessSoftwareMonitor(ConfigService config)
     {
         _config = config;
-        _logger = logger;
     }
 
-
-    public void CheckActivity(string jobName, Action<BackupState> onProgress, bool isStarting = false)
+    // Cette méthode sera appelée par un thread séparé (le Watcher) 
+    // ou au début de chaque fichier dans le BackupService.
+    public void UpdateControlState(List<BackupJob> allJobs)
     {
         string targetApp = _config.Current.BusinessSoftware;
         if (string.IsNullOrWhiteSpace(targetApp)) return;
 
-        bool hasLoggedPause = false;
+        // Suppression de l'extension .exe si l'utilisateur l'a mise (GetProcessesByName n'en veut pas)
+        if (targetApp.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            targetApp = targetApp.Substring(0, targetApp.Length - 4);
 
-        while (Process.GetProcessesByName(targetApp).Length > 0)
+        // Normaliser la recherche: toujours en minuscules pour la comparaison
+        targetApp = targetApp.ToLower();
+
+        // Chercher le processus (case-insensitive, partial match pour plus de flexibilité)
+        bool isRunning = Process.GetProcesses().Any(p => 
         {
-            if (!hasLoggedPause)
+            try { return p.ProcessName.ToLower().Contains(targetApp); }
+            catch { return false; }
+        });
+
+        if (isRunning)
+        {
+            // On utilise la méthode qui met le "feu rouge"
+            if (!JobControlService.IsPausedAll)
             {
-                _logger.Write(new LogEntry
-                {
-                    JobName = jobName,
-                    Source = "MONITOR",
-                    // Si isStarting est vrai, on logge "START_BLOCK", sinon "EXEC_PAUSE"
-                    Target = isStarting ? "START_BLOCK" : "EXEC_PAUSE",
-                    FileSize = 0
-                }, _config.Current.LogFormat == LogFormat.Json);
-                hasLoggedPause = true;
+                _pauseTriggeredByBusinessSoftware = true;
+                JobControlService.PauseAll();
+                OnSoftwareDetectionChanged?.Invoke(true);
             }
-
-            onProgress?.Invoke(new BackupState
+        }
+        else
+        {
+            // On ne relance QUE si c'est le logiciel métier qui avait mis la pause
+            // (Optionnel : si on veut que ça reprenne tout seul)
+            if (JobControlService.IsPausedAll && _pauseTriggeredByBusinessSoftware)
             {
-                JobName = jobName,
-                Status = JobState.Paused,
-                // Ici on change le texte selon le moment
-                CurrentFile = isStarting
-                    ? $"En attente de fermeture de {targetApp} pour démarrer..."
-                    : $"Sauvegarde suspendue : {targetApp} est ouvert."
-            });
-
-            Thread.Sleep(2000);
+                // On passe la liste des jobs si on veut tout réveiller
+                // Ou on laisse l'utilisateur cliquer sur Resume manuellement pour plus de sécurité.
+                _pauseTriggeredByBusinessSoftware = false;
+                JobControlService.ResumeAll(allJobs);
+                OnSoftwareDetectionChanged?.Invoke(false);
+            }
         }
     }
 }
-
-// Gère la suspension de la sauvegarde tant que le processus métier cible est détecté.
-// Assure l'unicité de l'inscription dans les logs et la mise à jour en temps réel de l'état (BackupState) pour l'interface utilisateur.

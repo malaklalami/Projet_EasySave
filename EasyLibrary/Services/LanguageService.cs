@@ -1,4 +1,7 @@
-﻿using System.Text.Json;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text.Json;
 
 namespace EasySave.Services;
 
@@ -6,11 +9,10 @@ public class LanguageService
 {
     private Dictionary<string, string> _translations = new();
 
-    public void Load(string lang)
+    public void Load(string langCode)
     {
-
-        string fileName = $"{lang}.json";
-        string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", fileName);
+        // On cherche maintenant dans le sous-dossier "Resources" du répertoire d'exécution
+        string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", $"{langCode}.json");
 
         if (File.Exists(path))
         {
@@ -19,23 +21,24 @@ public class LanguageService
                 string json = File.ReadAllText(path);
                 _translations = JsonSerializer.Deserialize<Dictionary<string, string>>(json) ?? new();
             }
-            catch
+            catch (Exception ex)
             {
-                // Si le JSON est cassé, on évite le crash
+                // Debug : Affiche l'erreur si le JSON est mal formé
+                Console.WriteLine($"[ERROR] JSON Corrompu : {ex.Message}");
                 _translations = new Dictionary<string, string>();
             }
         }
         else
         {
-            // Optionnel : Message de debug si le fichier n'est pas trouvé
-            Console.WriteLine($"[Warning] Language file not found: {path}");
-            _translations = new Dictionary<string, string>();
+            // Debug : Affiche où l'application cherche REELLEMENT les fichiers
+            Console.WriteLine($"[DEBUG] Fichier introuvable à : {path}");
         }
     }
+    
 
     public string Get(string key)
     {
-        // Si la clé existe, on renvoie la trad, sinon on renvoie la clé elle-même (pour repérer les oublis)
-        return _translations.ContainsKey(key) ? _translations[key] : key;
+        // Renvoie la traduction ou la clé si introuvable (pour débugger facilement)
+        return _translations.TryGetValue(key, out string? value) ? value : $"[{key}]";
     }
 }

@@ -1,32 +1,44 @@
-﻿using EasyLibrary.ViewModels;
-
+﻿using EasySave.ViewModels;
+using System;
+using System.Threading.Tasks;
+using EasySave.Services;
 
 namespace EasyConsole;
 
 class Program
 {
-    static void Main(string[] args)
+    static async Task Main(string[] args)
     {
-        // 1. On crée le contrôleur (MainViewModel)
-        // Il charge automatiquement les jobs et settings au démarrage grâce à son constructeur.
+        // Initialisation du ViewModel (charge les jobs et la langue)
         MainViewModel viewModel = new MainViewModel();
 
-        // 2. On vérifie s'il y a des arguments (Mode ligne de commande : EasySave.exe 1-3)
+        viewModel.OnSoftwareDetectionEvent += (isDetected) =>
+        {
+            if (isDetected)
+            {
+                Console.WriteLine($"\n {viewModel.LanguageService.Get("Software_Detected")}\n");
+            }
+            else
+            {
+                Console.WriteLine($"\n {viewModel.LanguageService.Get("Software_Closed")}\n");
+            }
+        };
+
         if (args.Length > 0)
         {
-            Console.WriteLine($"--- Mode Automatique : Exécution de {args[0]} ---");
-            // On appelle directement la méthode du contrôleur
-            viewModel.Execute(args[0]);
-
-            Console.WriteLine("\n[TERMINÉ] Appuyez sur une touche pour quitter.");
+            // Mode Automatique (ex: EasySave.exe 1-3)
+            Console.WriteLine($"--- Mode Automatique : {args[0]} ---");
+            await viewModel.ExecuteSelection(args[0]);
+            Console.WriteLine("\nSauvegarde lancée en arrière-plan...");
+            Console.WriteLine("\nAppuyez sur une touche pour quitter.");
             Console.ReadKey();
+            viewModel.StopAll();
         }
         else
         {
-            // 3. MODE INTERACTIF (Menu)
-            // On délègue toute la gestion du menu à la classe dédiée
+            // Mode Interactif (Menu)
             MenuHandler menu = new MenuHandler(viewModel);
-            menu.Run();
+            await menu.Run();
         }
     }
 }

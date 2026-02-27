@@ -9,9 +9,34 @@
   "Menu_Option7": "7. Effacer tous les travaux",
   "Menu_Option8": "8. Configurer les extensions à chiffrer",
   "Menu_Option9": "9. Configurer le logiciel métier",
+  "Menu_Option10": "10. Configurer endroit cible des logs",
+  "Menu_Option_Pause": "PAUSE  : Tapez 'pause' pour (tous) ou 'pause [n°]' (ex: pause 1)",
+  "Menu_Option_Resume": "RESUME : Tapez 'resume' pour (tous) ou 'resume [n°]'",
+  "Menu_Option_Stop": "STOP   : Tapez 'stop' pour (tous) ou 'stop [n°]'",
   "Menu_Quit": "q. Quitter",
 
+  "Input_Type_Options": "(Taper 0 ou Complet / 1 ou Différentiel)",
+
+  "Lang_Menu_Title": "--- Choix de la Langue ---",
+  "Lang_Option_En": "1. English",
+  "Lang_Option_Fr": "2. Français",
   "Lang_Back": "b. Retour",
+  "Lang_Confirm_En": "Langue changée en Anglais !",
+  "Lang_Confirm_Fr": "Langue changée en Français !",
+
+  "Ext_Menu_Title": "--- Gestion des Extensions (Chiffrement) ---",
+  "Ext_Option_Add": "1. Ajouter une extension",
+  "Ext_Option_Clear": "2. Vider la liste",
+  "Soft_Menu_Title": "--- Gestion du Logiciel Métier ---",
+  "Soft_Option_Update": "1. Modifier le logiciel",
+  "Soft_Option_Delete": "2. Supprimer le logiciel actuel",
+  "Action_Success": "Opération réussie !",
+  "Current_Extensions": "Extensions actuelles : {0}",
+  "No_Extensions": "Aucune extension configurée.",
+  "Current_Software": "Logiciel métier actuel : {0}",
+  "No_Software": "Aucun logiciel métier configuré.",
+  "Manage_Instructions_Ext": "Entrez une extension pour l'ajouter ou la supprimer (ex: .pdf) :",
+  "Manage_Instructions_Soft": "Entrez le nom du logiciel (ex: Calculator) :",
 
   "Job_List_Title": "--- Liste des Travaux ---",
   "Job_List_Empty": "Aucun travail configuré.",
@@ -37,12 +62,30 @@
 
   "Run_Title": "--- Lancer une sauvegarde ---",
   "Run_Input": "Entrez le(s) numéro(s) (ex: 1, 0-3, 1;3) : ",
-  "Run_Finished": "Exécution terminée.",
+  "Run_Finished": "Succès : Exécution terminée.",
+  "Run_Started": "Démarrage des travaux...",
 
   "Success_Finished": "Succès : {0} terminé.",
   "Error_SourceNotFound": "[ERREUR] Le dossier source n'existe pas : {0}",
   "Error_Global": "[ERREUR] Impossible d'exécuter {0}. Chemin invalide ou zone protégée.",
   "Msg_LangChanged": "Langue changée !",
   "Msg_LogFormatChanged": "Format des logs changé : ",
-  "Msg_AllJobsDeleted": ">>>> Tous les travaux ont été supprimés."
+  "Msg_AllJobsDeleted": ">>>> Tous les travaux ont été supprimés.",
+
+  "Software_Detected": "[MONITOR] Logiciel métier détecté ! Pause automatique...",
+  "Software_Closed": "[MONITOR] Logiciel métier fermé. Reprise de la sauvegarde...",
+  "Status_Waiting": "[EN ATTENTE - Gros fichier]",
+  "Status_Paused": "[PAUSE] La sauvegarde est arrêtée temporairement.",
+  "Status_Resumed": "[REPRISE] La sauvegarde redémarre.",
+  "Job_Paused": "Travail mis en pause",
+  "Job_Resumed": "Travail repris",
+  "Job_Stopped": "Travail arrêté",
+  "All_Jobs_Paused": "Tous les travaux ont été mis en pause.",
+  "All_Jobs_Resumed": "Tous les travaux ont été repris.",
+  "All_Jobs_Stopped": "Tous les travaux ont été arrêtés.",
+
+  "Title_Alert": "Alerte Système",
+  "Error_DiskFull": "Espace disque insuffisant sur le lecteur : {0}",
+  "Error_AccessDenied": " Accès refusé pour le fichier : {0}. Vérifiez les permissions.",
+  "Error_Unknown": "Erreur inattendue : {0}"
 }

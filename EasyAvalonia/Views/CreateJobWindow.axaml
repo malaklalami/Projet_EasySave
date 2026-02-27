@@ -1,0 +1,52 @@
+<Window xmlns="https://github.com/avaloniaui"
+xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+x:Class="EasyAvalonia.Views.CreateJobWindow"
+Title="Créer un Travail de Sauvegarde" Width="550" Height="700"
+WindowStartupLocation="CenterOwner" Background="#0D1117" Foreground="#E6EDF3">
+
+    <StackPanel Margin="30" Spacing="20">
+        <TextBlock Name="TitleTextBlock" Text="CREER UN TRAVAIL" FontSize="20" FontWeight="Bold" Foreground="#58A6FF"/>
+
+        <Border Background="#161B22" Padding="18" CornerRadius="10" BorderBrush="#30363D" BorderThickness="1">
+            <StackPanel Spacing="8">
+                <TextBlock Text="Nom du travail :" FontSize="12" Foreground="#E6EDF3" FontWeight="Bold"/>
+                <TextBox Name="NameInput" Background="#0D1117" BorderBrush="#30363D" Foreground="#E6EDF3" Padding="12" CornerRadius="6"/>
+            </StackPanel>
+        </Border>
+
+        <Border Background="#161B22" Padding="18" CornerRadius="10" BorderBrush="#30363D" BorderThickness="1">
+            <StackPanel Spacing="8">
+                <TextBlock Text="Repertoire Source :" FontSize="12" Foreground="#E6EDF3" FontWeight="Bold"/>
+                <Grid ColumnDefinitions="*, 50">
+                    <TextBox Name="SourceInput" Background="#0D1117" BorderBrush="#30363D" Foreground="#E6EDF3" Padding="12" CornerRadius="6"/>
+                    <Button Grid.Column="1" Content=".." Click="SelectSource_Click" Background="#238636" Foreground="White" Margin="8,0,0,0" CornerRadius="6"/>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <Border Background="#161B22" Padding="18" CornerRadius="10" BorderBrush="#30363D" BorderThickness="1">
+            <StackPanel Spacing="8">
+                <TextBlock Text="Repertoire Cible :" FontSize="12" Foreground="#E6EDF3" FontWeight="Bold"/>
+                <Grid ColumnDefinitions="*, 50">
+                    <TextBox Name="TargetInput" Background="#0D1117" BorderBrush="#30363D" Foreground="#E6EDF3" Padding="12" CornerRadius="6"/>
+                    <Button Grid.Column="1" Content=".." Click="SelectTarget_Click" Background="#238636" Foreground="White" Margin="8,0,0,0" CornerRadius="6"/>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <Border Background="#161B22" Padding="18" CornerRadius="10" BorderBrush="#30363D" BorderThickness="1">
+            <StackPanel Spacing="8">
+                <TextBlock Text="Type de sauvegarde :" FontSize="12" Foreground="#E6EDF3" FontWeight="Bold"/>
+                <ComboBox Name="TypeCombo" Width="200" SelectedIndex="0" Background="#0D1117" BorderBrush="#30363D" Foreground="#E6EDF3" Padding="12">
+                    <ComboBoxItem Content="Complete (Full)"/>
+                    <ComboBoxItem Content="Differentielle"/>
+                </ComboBox>
+            </StackPanel>
+        </Border>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="12" Margin="0,15,0,0">
+            <Button Content="Annuler" Click="Cancel_Click" Background="Transparent" Foreground="#E6EDF3" BorderBrush="#30363D" BorderThickness="1" CornerRadius="6" Padding="20,10"/>
+            <Button Name="ConfirmButton" Content=" Creer" Click="Confirm_Click" Background="#1F6FEB" Foreground="White" FontWeight="Bold" CornerRadius="6" Padding="25,10"/>
+        </StackPanel>
+    </StackPanel>
+</Window>

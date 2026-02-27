@@ -1,0 +1,112 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+xmlns:vm="using:EasyAvalonia.ViewModels" 
+xmlns:views="using:EasyAvalonia.Views"
+x:DataType="views:MainWindow"
+x:Class="EasyAvalonia.Views.MainWindow"
+Title="EasySave - ProSoft Edition v3.0" Width="1200" Height="750"
+WindowStartupLocation="CenterScreen"
+Background="#0D1117"
+Foreground="#E6EDF3">
+    
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Background="#161B22" Height="80" Padding="25,0" BorderBrush="#30363D" BorderThickness="0,0,0,2">
+            <Grid ColumnDefinitions="Auto, *, Auto, Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="15">
+                    <TextBlock Text="EasySave" FontSize="32" FontWeight="Bold" Foreground="#58A6FF" VerticalAlignment="Center"/>
+                    <TextBlock Text="ProSoft v3.0" FontSize="14" Foreground="#79C0FF" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <Button Content="Configuration" Click="OpenSettings_Click" Background="#238636" Foreground="White" FontWeight="Bold" CornerRadius="6" Padding="12,8"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Bottom" Background="#161B22" Height="90" Padding="25" BorderBrush="#30363D" BorderThickness="0,2,0,0">
+            <Grid ColumnDefinitions="Auto, *, Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center"
+                            IsVisible="{Binding IsAnyJobRunning}"> 
+                    <Button Name="PauseAllButton" Content="⏸ PAUSE TOUT" Click="PauseAll_Click" Background="#DA3633" Foreground="White" FontWeight="Bold" CornerRadius="6" Padding="15,10" MinWidth="120"/>
+                    <Button Name="ResumeAllButton" Content="▶ REPRENDRE" Click="ResumeAll_Click" Background="#238636" Foreground="White" FontWeight="Bold" CornerRadius="6" Padding="15,10" MinWidth="120"/>
+                    <Button Name="StopAllButton" Content="⏹ ARRETER" Click="StopAll_Click" Background="#8B2C2C" Foreground="White" FontWeight="Bold" CornerRadius="6" Padding="15,10" MinWidth="120"/>
+                </StackPanel>
+                
+                <Button Name="LaunchButton" Grid.Column="2" Content="LANCER" Click="RunSelected_Click" 
+                        Background="#1F6FEB" Foreground="White" FontWeight="Bold" FontSize="14" CornerRadius="6" Padding="20,10" MinWidth="140" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <!-- LEFT SIDEBAR - Gestion -->
+        <Border DockPanel.Dock="Left" Width="280" Background="#161B22" BorderBrush="#30363D" BorderThickness="0,0,2,0" Padding="20">
+            <StackPanel Spacing="15">
+                <TextBlock Name="TitleSidebar" Text="GESTION DES TRAVAUX" FontWeight="Bold" Foreground="#79C0FF" FontSize="12" Margin="0,0,0,10"/>
+                
+                <Button Name="CreateButton" Content="Creer un travail" Click="CreateJob_Click" Width="240" Background="#1F6FEB" Foreground="White" FontWeight="Bold" CornerRadius="6" Padding="12" HorizontalAlignment="Left"/>
+                <Button Name="DeleteButton" Content=" Supprimer" Click="DeleteJob_Click" Width="240" Background="#DA3633" Foreground="White" CornerRadius="6" Padding="12" HorizontalAlignment="Left"/>
+                
+                <Border Height="1" Background="#30363D" Margin="0,10"/>
+                
+                <Button Name="ClearAllButton" Content="Effacer tout" Click="ClearAll_Click" Width="240" Background="#8B2C2C" Foreground="White" FontWeight="Bold" CornerRadius="6" Padding="12" HorizontalAlignment="Left"/>
+            </StackPanel>
+        </Border>
+
+        <!-- MAIN CONTENT -->
+        <Grid Margin="25" RowDefinitions="Auto, *">
+            <TextBlock Name="MainTitle" Grid.Row="0" Text="Selectionnez et lancez vos travaux de sauvegarde" FontSize="18" FontWeight="Bold" Foreground="#E6EDF3" Margin="0,0,0,20"/>
+            
+            <ListBox Grid.Row="1" ItemsSource="{Binding DisplayJobs}" Background="Transparent" BorderThickness="0">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:JobDisplayModel">
+                        <Border CornerRadius="10" Padding="20" Margin="0,0,0,12" Background="#161B22" BorderBrush="#30363D" BorderThickness="1" BoxShadow="0 4 6 0 #10000000">
+                            <Grid RowDefinitions="Auto, Auto, Auto" ColumnDefinitions="30, 250, *, 150, 50, Auto">
+                                <!-- Checkbox -->
+                                <CheckBox Grid.Row="0" Grid.Column="0" Grid.RowSpan="2" IsChecked="{Binding IsSelected}" 
+                                          VerticalAlignment="Center"/>
+                                
+                                <!-- Job Info -->
+                                <StackPanel Grid.Row="0" Grid.Column="1" Spacing="3">
+                                    <TextBlock Text="{Binding Job.Name}" FontSize="14" FontWeight="Bold" Foreground="White"/>
+                                    <TextBlock Text="{Binding Job.SourceDir}" FontSize="11" Foreground="#8B949E" TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+
+                                <!-- Type & Destination -->
+                                <StackPanel Grid.Row="1" Grid.Column="1" Spacing="3">
+                                    <TextBlock Text="{Binding Job.Type, StringFormat='Type: {0}'}" FontSize="10" Foreground="#79C0FF"/>
+                                    <TextBlock Text="{Binding Job.TargetDir}" FontSize="10" Foreground="#8B949E" TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+
+                                <!-- Progress Bar -->
+                                <StackPanel Grid.Row="0" Grid.Column="2" Grid.RowSpan="2" Margin="20,0" VerticalAlignment="Center">
+                                    <ProgressBar Value="{Binding Progress}" Minimum="0" Maximum="100" 
+                                                 Height="20" Margin="0,0,0,5" Background="#0D1117" Foreground="#58A6FF" CornerRadius="4"/>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                                        <TextBlock Text="{Binding Progress, StringFormat='N1'}%" FontSize="11" Foreground="#79C0FF"/>
+                                        <TextBlock Text="🔄 Reprise" FontSize="10" Foreground="#FFA657" FontWeight="Bold" IsVisible="{Binding IsResuming}"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Status -->
+                                <StackPanel Grid.Row="0" Grid.Column="3" Grid.RowSpan="2" Margin="15,0" VerticalAlignment="Center" Spacing="5">
+                                    <Ellipse Width="12" Height="12" Fill="{Binding StatusColor}" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Status}" Foreground="#8B949E" FontSize="10" HorizontalAlignment="Center"/>
+                                </StackPanel>
+
+                                <!-- Edit Button -->
+                                <Button Grid.Row="0" Grid.Column="4" Grid.RowSpan="2" Content="✏️" Click="EditJob_Click" 
+                                        Background="#238636" Foreground="White" Padding="8" CornerRadius="4" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+
+                                <!-- Action Buttons -->
+                                <StackPanel Grid.Row="0" Grid.Column="5" Grid.RowSpan="2" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center" IsVisible="{Binding IsRunning}"> 
+                                    <Button Content="⏸" Click="PauseJob_Click" Background="#DA3633" Foreground="White" Padding="8" CornerRadius="4" IsVisible="{Binding !IsPaused}"/>
+                                    <Button Content="▶" Click="ResumeJob_Click" Background="#238636" Foreground="White" Padding="8" CornerRadius="4" IsVisible="{Binding IsPaused}"/>
+                                    <Button Content="⏹" Click="StopJob_Click" Background="#8B2C2C" Foreground="White" Padding="8" CornerRadius="4"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+    </DockPanel>
+</Window>

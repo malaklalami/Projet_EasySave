@@ -1,14 +1,23 @@
 ﻿using EasySave.Core;
 using System;
+using System.Collections.Generic;
 
 namespace EasySave.Models;
 
 public class BackupState
 {
-    public string JobName { get; set; } = string.Empty;
+    // ID unique du travail pour le suivi en parallèle
+    public int JobId { get; set; }
+
+    // État actuel (Active, Paused, Inactive, Waiting)
     public JobState Status { get; set; } = JobState.Inactive;
-    public double Progress { get; set; }
-    public string CurrentFile { get; set; } = string.Empty;
-    public DateTime LastUpdate { get; set; }
+
+    // Nombre total de fichiers au départ (pour calculer la progression)
+    public int TotalFilesCount { get; set; }
+
+    // Liste des chemins des fichiers restants à copier
+    public List<string> FilesToCopy { get; set; } = new();
+
+    // Horodatage de la dernière mise à jour
+    public DateTime LastUpdate { get; set; } = DateTime.Now;
 }
-//Contient ce qui change pendant une sauvegarde (progression %, fichier en cours, statut). C'est ce qui va dans state.json

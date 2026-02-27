@@ -1,10 +1,8 @@
 ﻿using EasySave.Models;
 using System;
-using System.Collections.Generic;
-using System.Data;
 using System.IO;
-using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace EasySave.Services;
 
@@ -13,15 +11,66 @@ public class ConfigService
     private readonly string _path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.json");
     private Settings? _cache;
 
+    // PISTE ACTIVÉE : Permet de prévenir l'UI ou le moteur quand on change un réglage
+    public event Action? OnSettingsChanged;
+
+    private readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        WriteIndented = true,
+        Converters = { new JsonStringEnumConverter() }
+    };
+
     public Settings Current => _cache ?? Load();
 
     public Settings Load()
     {
-        if (!File.Exists(_path)) _cache = new Settings();
-        else _cache = JsonSerializer.Deserialize<Settings>(File.ReadAllText(_path)) ?? new Settings();
+        if (!File.Exists(_path))
+        {
+            _cache = new Settings();
+        }
+        else
+        {
+            try
+            {
+                _cache = JsonSerializer.Deserialize<Settings>(File.ReadAllText(_path), _jsonOptions) ?? new Settings();
+            }
+            catch
+            {
+                _cache = new Settings(); // Sécurité anti-crash si le JSON est mal écrit
+            }
+        }
         return _cache;
     }
 
-    public void Save() => File.WriteAllText(_path, JsonSerializer.Serialize(_cache, new JsonSerializerOptions { WriteIndented = true }));
+    public void Save()
+    {
+        // Sauvegarde physique sur le disque
+        File.WriteAllText(_path, JsonSerializer.Serialize(_cache, _jsonOptions));
+
+        // ON PRÉVIENT LES AUTRES : 
+        // Si quelqu'un écoute (l'UI par exemple), on lance l'alerte
+        OnSettingsChanged?.Invoke();
+    }
+
+
+
+public void ManageEncryptionExtension(string ext)
+    {
+        if (string.IsNullOrWhiteSpace(ext)) return;
+        if (!ext.StartsWith(".")) ext = "." + ext;
+
+        if (Current.EncryptionExtensions.Contains(ext))
+            Current.EncryptionExtensions.Remove(ext);
+        else
+            Current.EncryptionExtensions.Add(ext);
+
+        Save();
+    }
+
+    public void UpdateBusinessSoftware(string name)
+    {
+        Current.BusinessSoftware = name;
+        Save();
+    }
 }
-//Charge settings.json. Il contient le Cache : au lieu de relire le fichier sur le disque à chaque fois, il garde les réglages en ram
