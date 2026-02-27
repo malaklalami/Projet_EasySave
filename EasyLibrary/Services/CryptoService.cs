@@ -18,7 +18,14 @@ namespace EasySave.Services
 
         public long Encrypt(string file)
         {
-            if (!File.Exists(_path)) return -1;
+            if (!File.Exists(_path))
+            {
+                Debug.WriteLine($"[CRYPTO] CryptoSoft.exe NOT FOUND at: {_path}");
+                return -1;
+            }
+
+            Debug.WriteLine($"[CRYPTO] Starting encryption: {file}");
+            Debug.WriteLine($"[CRYPTO] CryptoSoft path: {_path}");
 
             int maxAttempts = 50;
             int currentAttempt = 0;
@@ -45,22 +52,26 @@ namespace EasySave.Services
                         if (p != null)
                         {
                             p.WaitForExit();
+                            Debug.WriteLine($"[CRYPTO] CryptoSoft exited with code: {p.ExitCode}");
 
                             // CAS 1 : Succès (ExitCode >= 0)
                             if (p.ExitCode >= 0)
                             {
+                                Debug.WriteLine($"[CRYPTO] Encryption SUCCESS: {p.ExitCode}ms");
                                 return p.ExitCode;
                             }
 
                             // CAS 2 : Le Mutex est occupé (Code -3)
                             if (p.ExitCode == -3)
                             {
+                                Debug.WriteLine($"[CRYPTO] Mutex busy, retrying... ({currentAttempt + 1}/{maxAttempts})");
                                 currentAttempt++;
                                 Thread.Sleep(100);
                                 continue;
                             }
 
                             // Si code d'erreur fatal (ex: -1), on ne boucle pas
+                            Debug.WriteLine($"[CRYPTO] Fatal error: {p.ExitCode}");
                             return -1;
                         }
                     }
@@ -71,6 +82,7 @@ namespace EasySave.Services
                     return -1;
                 }
             }
+            Debug.WriteLine($"[CRYPTO] Max attempts reached, giving up");
             return -1;
         }
     }

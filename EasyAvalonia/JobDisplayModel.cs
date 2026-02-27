@@ -37,13 +37,6 @@ public class JobDisplayModel : INotifyPropertyChanged
         }
     }
 
-    private string _currentActionText = "";
-    public string CurrentActionText
-    {
-        get => _currentActionText;
-        set { _currentActionText = value; OnPropertyChanged(); }
-    }
-
     private bool _isPaused;
     public bool IsPaused
     {
@@ -54,6 +47,17 @@ public class JobDisplayModel : INotifyPropertyChanged
             OnPropertyChanged();
             OnPropertyChanged(nameof(StatusColor));
             OnPropertyChanged(nameof(IsRunning));
+        }
+    }
+
+    private bool _isResuming;
+    public bool IsResuming
+    {
+        get => _isResuming;
+        set
+        {
+            _isResuming = value;
+            OnPropertyChanged();
         }
     }
 

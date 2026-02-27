@@ -30,7 +30,17 @@ public class BusinessSoftwareMonitor
         if (targetApp.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
             targetApp = targetApp.Substring(0, targetApp.Length - 4);
 
-        if (Process.GetProcessesByName(targetApp).Length > 0)
+        // Normaliser la recherche: toujours en minuscules pour la comparaison
+        targetApp = targetApp.ToLower();
+
+        // Chercher le processus (case-insensitive, partial match pour plus de flexibilité)
+        bool isRunning = Process.GetProcesses().Any(p => 
+        {
+            try { return p.ProcessName.ToLower().Contains(targetApp); }
+            catch { return false; }
+        });
+
+        if (isRunning)
         {
             // On utilise la méthode qui met le "feu rouge"
             if (!JobControlService.IsPausedAll)

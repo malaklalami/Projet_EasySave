@@ -25,9 +25,13 @@ public class MainViewModel
     private readonly StateService _state = new();
     private readonly BackupReportingService _reporter;
 
+    // Événement pour notifier les UI quand la langue change
+    public Action? OnLanguageChanged { get; set; }
+
     // --- Propriétés Publiques ---
     public LanguageService LanguageService { get; } = new();
     public Settings Settings => _config.Current;
+    public StateService State => _state;
     public ObservableCollection<BackupJob> Jobs { get; }
 
     // Événement pour que l'UI (Console/WPF) reçoive la progression
@@ -51,6 +55,26 @@ public class MainViewModel
         string baseDir = AppDomain.CurrentDomain.BaseDirectory;
         string cryptoExe = OperatingSystem.IsWindows() ? "CryptoSoft.exe" : "CryptoSoft";
         string cryptoPath = Path.Combine(baseDir, cryptoExe);
+        
+        // Debug: vérifier si CryptoSoft.exe existe
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] CryptoSoft recherché à: {cryptoPath}");
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] CryptoSoft existe: {File.Exists(cryptoPath)}");
+        
+        // Si CryptoSoft n'existe pas au chemin principal, chercher dans les dossiers bin/Release/net8.0
+        if (!File.Exists(cryptoPath))
+        {
+            // Chercher dans: ...\CryptoSoft\bin\Release\net8.0\win-x64\CryptoSoft.exe
+            string alternativePath = Path.Combine(baseDir, "..", "..", "CryptoSoft", "bin", "Release", "net8.0", "win-x64", cryptoExe);
+            if (File.Exists(alternativePath))
+            {
+                cryptoPath = alternativePath;
+                System.Diagnostics.Debug.WriteLine($"[DEBUG] CryptoSoft trouvé à: {cryptoPath}");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"[DEBUG] CryptoSoft INTROUVABLE!");
+            }
+        }
 
         // On utilise la clé définie dans les settings (ou une clé fixe "MY_KEY")
         var cryptoService = new CryptoService(cryptoPath, "MY_KEY");
@@ -141,6 +165,19 @@ public class MainViewModel
         // int index = Jobs.IndexOf(jobToEdit);
         // Jobs[index] = jobToEdit; 
     }
+    public void UpdateLogTarget(int choice)
+    {
+        // On mappe le choix numérique de la console vers l'Enum
+        Settings.LogTarget = choice switch
+        {
+            1 => LogTarget.Local,
+            2 => LogTarget.Remote,
+            3 => LogTarget.Both,
+            _ => LogTarget.Local
+        };
+
+        _config.Save(); // On sauvegarde dans settings.json
+    }
 
     public void DeleteJob(BackupJob job)
     {
@@ -163,6 +200,7 @@ public class MainViewModel
         Settings.Language = lang;
         _config.Save();
         LanguageService.Load(lang); // Recharge immédiatement les fichiers JSON
+        OnLanguageChanged?.Invoke(); // Notifie les UI de mettre à jour les traductions
     }
 
     public void SwitchLogFormat()

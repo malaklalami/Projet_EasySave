@@ -14,6 +14,7 @@ public partial class CreateJobWindow : Window
     public string Target { get; private set; } = "";
     public BackupType Type { get; private set; }
     public bool IsConfirmed { get; private set; }
+    private bool IsEditMode { get; set; } = false;
 
     public CreateJobWindow()
     {
@@ -23,12 +24,22 @@ public partial class CreateJobWindow : Window
     // Cette méthode permet de pré-remplir les champs lors d'une modification
     public void LoadJobData(string name, string source, string target, BackupType type)
     {
+        IsEditMode = true;
         NameInput.Text = name;
         SourceInput.Text = source;
         TargetInput.Text = target;
 
         // 0 = Complet (Full), 1 = Différentiel
         TypeCombo.SelectedIndex = (type == BackupType.Full) ? 0 : 1;
+        
+        // Mettre à jour le titre de la fenêtre et le TextBlock
+        this.Title = "Modifier un Travail de Sauvegarde";
+        var titleTextBlock = this.FindControl<TextBlock>("TitleTextBlock");
+        if (titleTextBlock != null) titleTextBlock.Text = "MODIFIER UN TRAVAIL";
+        
+        // Mettre à jour le bouton
+        var confirmButton = this.FindControl<Button>("ConfirmButton");
+        if (confirmButton != null) confirmButton.Content = "Modifier";
     }
 
     private async void SelectSource_Click(object sender, RoutedEventArgs e)

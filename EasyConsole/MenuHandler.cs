@@ -14,50 +14,53 @@ public class MenuHandler
         _jobUI = new JobUI(vm);
     }
 
-    public void Run()
+    public async Task Run()
     {
-        while (true)
+        await Task.Run(() =>
         {
-            ShowMenu();
-            Console.Write("\n> ");
-            string input = Console.ReadLine()?.ToLower() ?? "";
-
-            // Gestion des commandes de contrôle direct
-            if (input.StartsWith("pause")) 
-            { 
-                HandleControlCommand(input, "pause"); // <--- Appel d'une méthode d'aide
-                continue; 
-            }
-            if (input.StartsWith("resume")) 
-            { 
-                HandleControlCommand(input, "resume"); // <--- Appel d'une méthode d'aide
-                continue; 
-            }
-            if (input.StartsWith("stop")) 
-            { 
-                HandleControlCommand(input, "stop"); // <--- Appel d'une méthode d'aide
-                continue; 
-            }
-
-            switch (input)
+            while (true)
             {
-                case "1": _jobUI.CreateJob(); break;
-                case "2": _jobUI.ExecuteSelection(); break;
-                case "3": ChangeLanguageMenu(); break;
-                case "4": _vm.SwitchLogFormat(); break;
-                case "5": _jobUI.EditJob(); break;
-                case "6": _jobUI.DeleteJob(); break;
-                case "7": _vm.ClearAllJobs(); break;
-                case "8": EncryptionExtensionsMenu(); break;
-                case "9": BusinessSoftwareMenu(); break;
-                case "10": SettingsUI.LogDestination(_vm); break;
-                case "q": return;
-                default:
-                    Console.WriteLine(_vm.LanguageService.Get("Invalid_Choice"));
-                    Thread.Sleep(1000);
-                    break;
+                ShowMenu();
+                Console.Write("\n> ");
+                string input = Console.ReadLine()?.ToLower() ?? "";
+
+                // Gestion des commandes de contrôle direct
+                if (input.StartsWith("pause")) 
+                { 
+                    HandleControlCommand(input, "pause"); // <--- Appel d'une méthode d'aide
+                    continue; 
+                }
+                if (input.StartsWith("resume")) 
+                { 
+                    HandleControlCommand(input, "resume"); // <--- Appel d'une méthode d'aide
+                    continue; 
+                }
+                if (input.StartsWith("stop")) 
+                { 
+                    HandleControlCommand(input, "stop"); // <--- Appel d'une méthode d'aide
+                    continue; 
+                }
+
+                switch (input)
+                {
+                    case "1": _jobUI.CreateJob(); break;
+                    case "2": _jobUI.ExecuteSelection(); break;
+                    case "3": ChangeLanguageMenu(); break;
+                    case "4": _vm.SwitchLogFormat(); break;
+                    case "5": _jobUI.EditJob(); break;
+                    case "6": _jobUI.DeleteJob(); break;
+                    case "7": _vm.ClearAllJobs(); break;
+                    case "8": EncryptionExtensionsMenu(); break;
+                    case "9": BusinessSoftwareMenu(); break;
+                    case "10": SettingsUI.LogDestination(_vm); break;
+                    case "q": return;
+                    default:
+                        Console.WriteLine(_vm.LanguageService.Get("Invalid_Choice"));
+                        Thread.Sleep(1000);
+                        break;
+                }
             }
-        }
+        });
     }
 
     private void ShowMenu()

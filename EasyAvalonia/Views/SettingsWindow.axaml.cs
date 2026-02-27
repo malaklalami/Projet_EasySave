@@ -1,6 +1,6 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Interactivity;
-using EasyLibrary.ViewModels;
+using EasySave.ViewModels;
 using EasySave.Core;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,6 +20,13 @@ public partial class SettingsWindow : Window
 
         // --- CHARGEMENT DES DONNÉES ---
 
+        // Langue
+        var langCombo = this.FindControl<ComboBox>("LanguageCombo");
+        if (langCombo != null)
+        {
+            langCombo.SelectedIndex = _vm.Settings.Language == "fr" ? 1 : 0;
+        }
+
         // Logique métier & Performance
         this.FindControl<TextBox>("BusinessSoftwareInput").Text = _vm.Settings.BusinessSoftware;
         this.FindControl<TextBox>("LargeFileThresholdInput").Text = _vm.Settings.LargeFileThreshold.ToString();
@@ -29,6 +36,22 @@ public partial class SettingsWindow : Window
         var formatCombo = this.FindControl<ComboBox>("LogFormatCombo");
         formatCombo.SelectedIndex = _vm.Settings.LogFormat == LogFormat.Json ? 0 : 1;
 
+        // Cible des Logs (Local, Remote, Both)
+        var logTargetCombo = this.FindControl<ComboBox>("LogTargetCombo");
+        if (logTargetCombo != null)
+        {
+            logTargetCombo.SelectedIndex = _vm.Settings.LogTarget switch
+            {
+                LogTarget.Local => 0,
+                LogTarget.Remote => 1,
+                LogTarget.Both => 2,
+                _ => 0
+            };
+        }
+
+        // IP Distante
+        this.FindControl<TextBox>("RemoteIpInput").Text = _vm.Settings.RemoteIp;
+
         // Extensions (Transformation Liste -> Texte pour l'affichage)
         this.FindControl<TextBox>("CryptoExtensionsInput").Text = string.Join(", ", _vm.Settings.EncryptionExtensions);
         this.FindControl<TextBox>("PriorityExtensionsInput").Text = string.Join(", ", _vm.Settings.PriorityExtensions);
@@ -36,23 +59,45 @@ public partial class SettingsWindow : Window
 
     private void Save_Click(object sender, RoutedEventArgs e)
     {
-        // 1. Sauvegarde Logiciel Métier
+        // 1. Langue
+        var langCombo = this.FindControl<ComboBox>("LanguageCombo");
+        if (langCombo != null)
+        {
+            _vm.UpdateLanguage(langCombo.SelectedIndex == 1 ? "fr" : "en");
+        }
+
+        // 2. Sauvegarde Logiciel Métier
         _vm.UpdateBusinessSoftware(this.FindControl<TextBox>("BusinessSoftwareInput").Text ?? "");
 
-        // 2. Sauvegarde Seuil n Ko & Parallélisme
+        // 3. Sauvegarde Seuil n Ko & Parallélisme
         if (long.TryParse(this.FindControl<TextBox>("LargeFileThresholdInput").Text, out long threshold))
             _vm.Settings.LargeFileThreshold = threshold;
 
         _vm.Settings.MaxParallelFiles = (int)(this.FindControl<NumericUpDown>("MaxParallelInput").Value ?? 4);
 
-        // 3. Sauvegarde Log Format (JSON/XML)
+        // 4. Sauvegarde Log Format (JSON/XML)
         var formatCombo = this.FindControl<ComboBox>("LogFormatCombo");
         _vm.Settings.LogFormat = formatCombo.SelectedIndex == 0 ? LogFormat.Json : LogFormat.Xml;
 
-        // 4. Sauvegarde Extensions Crypto
+        // 5. Sauvegarde Cible des Logs
+        var logTargetCombo = this.FindControl<ComboBox>("LogTargetCombo");
+        if (logTargetCombo != null)
+        {
+            _vm.Settings.LogTarget = logTargetCombo.SelectedIndex switch
+            {
+                1 => LogTarget.Remote,
+                2 => LogTarget.Both,
+                _ => LogTarget.Local
+            };
+        }
+
+        // 6. Sauvegarde IP Distante
+        _vm.Settings.RemoteIp = this.FindControl<TextBox>("RemoteIpInput").Text ?? "127.0.0.1";
+
+        // 7. Sauvegarde Extensions Crypto
         _vm.Settings.EncryptionExtensions = ParseExtensions(this.FindControl<TextBox>("CryptoExtensionsInput").Text);
 
-        // 5. Sauvegarde Extensions Prioritaires
+        // 8. Sauvegarde Extensions Prioritaires
         _vm.Settings.PriorityExtensions = ParseExtensions(this.FindControl<TextBox>("PriorityExtensionsInput").Text);
 
         // Enregistrement final sur le disque

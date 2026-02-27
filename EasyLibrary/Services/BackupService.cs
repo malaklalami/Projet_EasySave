@@ -79,7 +79,6 @@ public class BackupService
         {
             lock (_lock)
             {
-                //_totalFilesCount = 0;
                 foreach (var job in jobs)
                 {
                     if (JobControlService.IsStoppedAll) return;

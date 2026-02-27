@@ -25,4 +25,5 @@ public class Settings
 
     // Seuil "n Ko" pour définir un fichier volumineux (ex: 100 Ko)
     public long LargeFileThreshold { get; set; } = 100; // En Ko
+    public LogTarget LogTarget { get; set; } = LogTarget.Local;
 }
