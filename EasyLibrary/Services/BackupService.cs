@@ -1,277 +1,256 @@
-ï»¿using EasySave.Core;
+using EasySave.Core;
 using EasySave.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace EasySave.Services;
 
+/// <summary>
+/// Service de sauvegarde : gère les workers parallèles pour copier les fichiers.
+/// Responsabilité unique : copier des fichiers de A à B de manière parallèle.
+/// Les autres tâches (chiffrement, logs, etc.) sont gérées par MainViewModel.
+/// </summary>
 public class BackupService
 {
     private readonly ConfigService _configService;
     private readonly CryptoService _cryptoService;
     private readonly BusinessSoftwareMonitor _monitor;
-    private readonly StateService _stateService = new StateService();
+    private readonly FileTaskScheduler _scheduler;
 
-    // Files d'attente pour le partitionnement des tÃ¢ches
-    private readonly Queue<FileTask> _prioSmall = new(), _prioLarge = new(), _nonPrioSmall = new(), _nonPrioLarge = new();
+    private List<BackupJob> _allJobs = new();
 
-    private readonly object _lock = new();
-    private bool _isLargeFileSlotBusy = false;
-    private int _totalFilesCount;
-
-    private List<BackupJob> _allJobsList = new();
-
-    // Ã‰vÃ©nements pour l'UI et le ViewModel
-    public event Action<BackupState>? OnProgress;
+    // Événement : quand un fichier est complété
     public event Action<TransferResult>? OnFileCompleted;
+    // Événement : mise à jour de l'état du job
+    public event Action<BackupState>? OnProgress;
 
-    private record FileTask(string Source, string Dest, BackupJob Job);
-
-    public BackupService(ConfigService config, CryptoService crypto, BusinessSoftwareMonitor monitor)
+    public BackupService(ConfigService configService, CryptoService cryptoService, BusinessSoftwareMonitor monitor)
     {
-        _configService = config;
-        _cryptoService = crypto;
+        _configService = configService;
+        _cryptoService = cryptoService;
         _monitor = monitor;
+        _scheduler = new FileTaskScheduler(configService);
 
-        // Lancement initial des workers (Pool persistant)
-        int maxThreads = _configService.Current.MaxParallelFiles > 0 ? _configService.Current.MaxParallelFiles : 4;
-        for (int i = 0; i < maxThreads; i++)
+        // Lancer les workers parallèles
+        int maxWorkers = configService.Current.MaxParallelFiles > 0 ? configService.Current.MaxParallelFiles : 4;
+        for (int i = 0; i < maxWorkers; i++)
         {
-            Task.Run(WorkerLoop);
+            Task.Run(() => WorkerLoop());
         }
 
+        // Mise à jour périodique du moniteur
         Task.Run(async () =>
         {
-            while (true) // Ou utilise un boolÃ©en de contrÃ´le
+            while (true)
             {
-                _monitor.UpdateControlState(_allJobsList.ToList());
-
-        // On attend 1 seconde SANS bloquer le thread
-        await Task.Delay(1000);
+                _monitor.UpdateControlState(_allJobs);
+                await Task.Delay(1000);
             }
         });
     }
 
-    // --- REMPLISSAGE DES FILES ---
-
-    public void AddJobs(List<BackupJob> jobs)
+    /// <summary>
+    /// Lance la sauvegarde des jobs spécifiés
+    /// </summary>
+    public void AddJobs(List<BackupJob> backupJobs)
     {
+        _allJobs = backupJobs;
         JobControlService.Reset();
 
-        lock (_lock)
-        {
-            _prioSmall.Clear();
-            _prioLarge.Clear();
-            _nonPrioSmall.Clear();
-            _nonPrioLarge.Clear();
-            _isLargeFileSlotBusy = false; // On libÃ¨re aussi le slot "Gros fichiers"
-        }
-        _allJobsList = jobs;
-        Md5Service.LoadCache();
-
-        var savedStates = _stateService.ReadStates();
-
-        Task.Run(() =>
-        {
-            lock (_lock)
-            {
-                foreach (var job in jobs)
-                {
-                    if (JobControlService.IsStoppedAll) return;
-                    if (!Directory.Exists(job.SourceDir)) continue;
-
-                    job.TotalFilesForThisJob = 0;
-
-                    var state = savedStates.FirstOrDefault(s => s.JobId == job.Id);
-
-                    // Si le statut est "Paused" ou "Waiting", on peut essayer de reprendre la liste du JSON
-                    if (state != null && state.FilesToCopy.Any() && state.Status == JobState.Paused)
-                    {
-                        foreach (var f in state.FilesToCopy)
-                        {
-                            if (!File.Exists(f)) continue;
-                            string dest = Path.Combine(job.TargetDir, Path.GetRelativePath(job.SourceDir, f));
-                            Dispatch(f, dest, job);
-                            job.TotalFilesForThisJob++;
-                        }
-                    }
-                    // SINON (si c'est Stopped, Inactive, ou un bug "Active"), on repart sur un scan frais
-
-                    else
-                    {
-                        foreach (var f in Directory.EnumerateFiles(job.SourceDir, "*.*", SearchOption.AllDirectories))
-                        {
-                            string dest = Path.Combine(job.TargetDir, Path.GetRelativePath(job.SourceDir, f));
-
-                            if (job.Type == BackupType.Differential &&
-                                !Md5Service.HasChanged(job.Name, f, Md5Service.GetHash(f))) continue;
-
-                            Dispatch(f, dest, job);
-                            job.TotalFilesForThisJob ++;
-                        }
-                    }
-                }
-                Monitor.PulseAll(_lock); // RÃ©veille les threads qui attendent du travail
-            }
-        });
+        // Scanner les fichiers et les ajouter à la file d'attente
+        Task.Run(() => ScanAndScheduleFiles(backupJobs));
     }
 
-    // --- BOUCLE DES WORKERS ---
+    /// <summary>
+    /// Scanne les répertoires et ajoute les fichiers à traiter à la file d'attente
+    /// </summary>
+    private void ScanAndScheduleFiles(List<BackupJob> backupJobs)
+    {
+        _scheduler.ClearQueues(backupJobs);
+        Md5Service.LoadCache();
 
+        var savedStates = new StateService().ReadStates();
+
+        foreach (var backupJob in backupJobs)
+        {
+            if (JobControlService.IsStoppedAll)
+                return;
+
+            if (!Directory.Exists(backupJob.SourceDir))
+                continue;
+
+            backupJob.TotalFilesForThisJob = 0;
+            var savedState = savedStates.FirstOrDefault(s => s.JobId == backupJob.Id);
+
+            // Cas 1 : Reprendre une sauvegarde en pause
+            if (savedState != null && savedState.FilesToCopy.Any() && savedState.Status == JobState.Paused)
+            {
+                foreach (var filePath in savedState.FilesToCopy)
+                {
+                    if (File.Exists(filePath))
+                    {
+                        string destPath = Path.Combine(backupJob.TargetDir, 
+                            Path.GetRelativePath(backupJob.SourceDir, filePath));
+                        _scheduler.ScheduleFile(filePath, destPath, backupJob);
+                        backupJob.TotalFilesForThisJob++;
+                    }
+                }
+            }
+            // Cas 2 : Nouvelle sauvegarde
+            else
+            {
+                foreach (var sourceFilePath in Directory.EnumerateFiles(backupJob.SourceDir, "*.*", SearchOption.AllDirectories))
+                {
+                    // Sauvegarde différentielle : skip les fichiers non-modifiés
+                    if (backupJob.Type == BackupType.Differential)
+                    {
+                        string fileHash = Md5Service.GetHash(sourceFilePath);
+                        if (!Md5Service.HasChanged(backupJob.Name, sourceFilePath, fileHash))
+                            continue;
+                    }
+
+                    string destPath = Path.Combine(backupJob.TargetDir, 
+                        Path.GetRelativePath(backupJob.SourceDir, sourceFilePath));
+                    _scheduler.ScheduleFile(sourceFilePath, destPath, backupJob);
+                    backupJob.TotalFilesForThisJob++;
+                }
+            }
+        }
+
+        _scheduler.WakeupWaitingWorkers();
+    }
+
+    /// <summary>
+    /// Boucle principale d'un worker : récupère les tâches et les exécute
+    /// </summary>
     private void WorkerLoop()
     {
         while (!JobControlService.IsStoppedAll)
         {
-            FileTask? task = GetNextTask(out bool isLargeTask);
+            // Récupérer la prochaine tâche
+            FileTaskScheduler.FileTask? currentTask = _scheduler.GetNextTask(out bool isLargeFile);
 
-            if (task == null)
+            if (currentTask == null)
             {
-                lock (_lock) { Monitor.Wait(_lock, 1000); }
+                _scheduler.WaitForTask(1000);
                 continue;
             }
 
-            // Le worker s'arrÃªte ici si le bouton "Pause All" est cliquÃ© 
-            // OU si le bouton "Pause" de ce job prÃ©cis est cliquÃ©.
-            JobControlService.WaitIfPaused(task.Job);
+            // Vérifier les commandes de pause
+            JobControlService.WaitIfPaused(currentTask.BackupJob);
 
-            if (JobControlService.IsStoppedAll) break;
+            if (JobControlService.IsStoppedAll)
+                break;
 
-            try { ProcessFile(task); }
+            try
+            {
+                // Copier le fichier
+                CopyFile(currentTask);
+            }
             finally
             {
-                if (isLargeTask) lock (_lock) { _isLargeFileSlotBusy = false; Monitor.PulseAll(_lock); }
+                if (isLargeFile)
+                {
+                    _scheduler.ReleaseLargeFileSlot();
+                    _scheduler.WakeupWaitingWorkers();
+                }
             }
         }
     }
 
-    private FileTask? GetNextTask(out bool assignedToLargeSlot)
+    /// <summary>
+    /// Copie un fichier de la source vers la destination.
+    /// Gère aussi le chiffrement si nécessaire.
+    /// </summary>
+    private void CopyFile(FileTaskScheduler.FileTask fileTask)
     {
-        assignedToLargeSlot = false;
-        lock (_lock)
-        {
-            // PrioritÃ© 1 : Gros Prio (si slot libre)
-            if (_prioLarge.Count > 0 && !_isLargeFileSlotBusy)
-            {
-                assignedToLargeSlot = true; _isLargeFileSlotBusy = true;
-                return _prioLarge.Dequeue();
-            }
-            // PrioritÃ© 2 : Petit Prio
-            if (_prioSmall.Count > 0) return _prioSmall.Dequeue();
-
-            // PrioritÃ© 3 : Gros Non-Prio (si slot libre)
-            if (_nonPrioLarge.Count > 0 && !_isLargeFileSlotBusy)
-            {
-                assignedToLargeSlot = true; _isLargeFileSlotBusy = true;
-                return _nonPrioLarge.Dequeue();
-            }
-            // PrioritÃ© 4 : Petit Non-Prio
-            if (_nonPrioSmall.Count > 0) return _nonPrioSmall.Dequeue();
-
-            return null;
-        }
-    }
-
-    private void ProcessFile(FileTask task)
-    {
-        // Le moniteur met Ã  jour l'Ã©tat de JobControlService
-        _monitor.UpdateControlState(_allJobsList);
-
-        // On vÃ©rifie une derniÃ¨re fois si le moniteur vient de nous bloquer
-        JobControlService.WaitIfPaused(task.Job);
-
-        var sw = System.Diagnostics.Stopwatch.StartNew();
-        long cryptTime = 0;
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        long encryptionTimeMs = 0;
         bool success = true;
 
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(task.Dest)!);
-            File.Copy(task.Source, task.Dest, true);
+            // Créer le répertoire de destination
+            string destinationDirectory = Path.GetDirectoryName(fileTask.DestinationPath)!;
+            Directory.CreateDirectory(destinationDirectory);
 
-            if (_configService.Current.EncryptionExtensions.Any(e => task.Dest.EndsWith(e, StringComparison.OrdinalIgnoreCase)))
+            // Copier le fichier
+            File.Copy(fileTask.SourcePath, fileTask.DestinationPath, overwrite: true);
+
+            // Chiffrer si nécessaire
+            if (_configService.Current.EncryptionExtensions.Any(ext => 
+                fileTask.DestinationPath.EndsWith(ext, StringComparison.OrdinalIgnoreCase)))
             {
-                cryptTime = _cryptoService.Encrypt(task.Dest);
+                encryptionTimeMs = _cryptoService.Encrypt(fileTask.DestinationPath);
             }
         }
-        catch { success = false; }
-
-        sw.Stop();
-        FinalizeFile(task, sw.ElapsedMilliseconds, cryptTime, success);
-    }
-
-    private void FinalizeFile(FileTask task, long duration, long crypt, bool success)
-    {
-        // 1. On prÃ©pare les stats du fichier (pour le log)
-        var info = new FileInfo(task.Source);
-        var result = new TransferResult
+        catch
         {
-            JobName = task.Job.Name,
-            Source = task.Source,
-            Dest = task.Dest,
-            Size = info.Exists ? info.Length : 0,
-            TransferTimeMs = duration,
-            EncryptionTimeMs = crypt,
+            success = false;
+        }
+
+        stopwatch.Stop();
+
+        // Incrémenter le compteur de fichiers complétés
+        int completedCount = _scheduler.IncrementCompletedFiles(fileTask.BackupJob.Id);
+
+        // Préparer le rapport
+        var sourceFileInfo = new FileInfo(fileTask.SourcePath);
+        var transferResult = new TransferResult
+        {
+            JobName = fileTask.BackupJob.Name,
+            Source = fileTask.SourcePath,
+            Dest = fileTask.DestinationPath,
+            Size = sourceFileInfo.Exists ? sourceFileInfo.Length : 0,
+            TransferTimeMs = stopwatch.ElapsedMilliseconds,
+            EncryptionTimeMs = encryptionTimeMs,
             Success = success
         };
 
-        // 2. On prÃ©pare l'Ã©tat global du job (pour le state)
-        var remainingFiles = GetRemainingFiles(task.Job.Id);
-        JobState currentStatus;
+        // Déterminer le statut du job
+        var remainingFiles = _scheduler.GetRemainingFilesForJob(fileTask.BackupJob.Id);
+        JobState jobStatus = DetermineJobStatus(fileTask.BackupJob, remainingFiles.Count);
 
-        if (remainingFiles.Count == 0) currentStatus = JobState.Inactive;
-        else if (JobControlService.IsStoppedAll || task.Job.IsStopped)
+        var backupState = new BackupState
         {
-            // Si on a cliquÃ© sur Stop, on l'affiche dans le JSON avant que le thread ne meure
-            currentStatus = JobState.Stopped;
-        }
-        else if (JobControlService.IsPausedAll || task.Job.IsPaused)
-        {
-            currentStatus = JobState.Paused;
-        }
-        else
-        {
-            currentStatus = JobState.Active;
-        }
-
-        var currentState = new BackupState
-        {
-            JobId = task.Job.Id,
-            Status = currentStatus,
-            TotalFilesCount = task.Job.TotalFilesForThisJob,
-            FilesToCopy = remainingFiles
+            JobId = fileTask.BackupJob.Id,
+            Status = jobStatus,
+            TotalFilesCount = fileTask.BackupJob.TotalFilesForThisJob,
+            FilesToCopy = remainingFiles,
+            FilesCompleted = completedCount
         };
 
-        // 3. LE MOTEUR indique que c'est fini
-        OnFileCompleted?.Invoke(result);
-        OnProgress?.Invoke(currentState);
+        // Émettre les événements
+        OnFileCompleted?.Invoke(transferResult);
+        OnProgress?.Invoke(backupState);
     }
 
-    private void Dispatch(string s, string d, BackupJob j)
+    /// <summary>
+    /// Détermine l'état actuel du job
+    /// </summary>
+    private JobState DetermineJobStatus(BackupJob backupJob, int remainingFileCount)
     {
-        bool prio = _configService.Current.PriorityExtensions.Any(e => s.EndsWith(e, StringComparison.OrdinalIgnoreCase));
-        bool large = new FileInfo(s).Length > (_configService.Current.LargeFileThreshold * 1024);
+        if (remainingFileCount == 0)
+            return JobState.Inactive;
 
-        if (prio) { if (large) _prioLarge.Enqueue(new(s, d, j)); else _prioSmall.Enqueue(new(s, d, j)); }
-        else { if (large) _nonPrioLarge.Enqueue(new(s, d, j)); else _nonPrioSmall.Enqueue(new(s, d, j)); }
+        if (JobControlService.IsStoppedAll || backupJob.IsStopped)
+            return JobState.Stopped;
+
+        if (JobControlService.IsPausedAll || backupJob.IsPaused)
+            return JobState.Paused;
+
+        return JobState.Active;
     }
 
-    private List<string> GetRemainingFiles(int id)
-    {
-        lock (_lock)
-        {
-            return _prioSmall.Concat(_prioLarge).Concat(_nonPrioSmall).Concat(_nonPrioLarge)
-                             .Where(t => t.Job.Id == id).Select(t => t.Source).ToList();
-        }
-    }
-
-    // Pour rÃ©veiller les workers si le MainViewModel appelle StopAll
+    /// <summary>
+    /// Force les workers à se réveiller
+    /// </summary>
     public void ForcePulse()
     {
-        lock (_lock) { Monitor.PulseAll(_lock); }
+        _scheduler.WakeupWaitingWorkers();
     }
-
 }
+

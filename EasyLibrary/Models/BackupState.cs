@@ -18,6 +18,9 @@ public class BackupState
     // Liste des chemins des fichiers restants à copier
     public List<string> FilesToCopy { get; set; } = new();
 
+    // Nombre de fichiers déjà traités (progression monotone)
+    public int FilesCompleted { get; set; }
+
     // Horodatage de la dernière mise à jour
     public DateTime LastUpdate { get; set; } = DateTime.Now;
 }
