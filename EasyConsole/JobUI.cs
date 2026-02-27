@@ -67,7 +67,7 @@ public class JobUI
             var job = _vm.Jobs[i];
             Console.WriteLine(_vm.LanguageService.Get("Edit_Title"));
 
-            // 1. Modification du NOM
+            // Modification du nom
             Console.Write($"{_vm.LanguageService.Get("Input_JobName")} [{job.Name}] : ");
             string inputName = Console.ReadLine() ?? "";
             string newName = string.IsNullOrWhiteSpace(inputName) ? job.Name : inputName;

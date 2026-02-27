@@ -14,13 +14,14 @@ class Program
     {
         if (!Directory.Exists(_logFolder)) Directory.CreateDirectory(_logFolder);
 
+        // Serveur qui reçoit les logs des clients (EasyConsole, EasyAvalonia)
         TcpListener listener = new TcpListener(IPAddress.Any, 11000);
         listener.Start();
         Console.WriteLine("=== SERVEUR DE LOGS MULTI-CLIENTS ===");
 
         while (true)
         {
-            // On accepte un client et on lance un thread (Task) dédié pour ne pas bloquer les autres
+            // Accepte une connexion cliente et la traite en Task séparée
             TcpClient client = await listener.AcceptTcpClientAsync();
             _ = Task.Run(() => HandleClientAsync(client));
         }
@@ -39,10 +40,11 @@ class Program
             {
                 while (!reader.EndOfStream)
                 {
+                    // Reçoit une ligne JSON avec les infos de log
                     string? jsonData = await reader.ReadLineAsync();
                     if (string.IsNullOrWhiteSpace(jsonData)) continue;
 
-                    // --- ZONE SÉCURISÉE PAR MUTEX ---
+                    // Protection mutuelle pour éviter les écritures simultanées
                     _fileMutex.WaitOne();
                     try
                     {

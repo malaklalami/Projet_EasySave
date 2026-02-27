@@ -39,24 +39,15 @@ public class MainViewModel
 
     public MainViewModel()
     {
-        // 1. Chargement de la configuration globale
         _config.Load();
-
-        // 2. Initialisation de la langue (basée sur les settings)
         LanguageService.Load(Settings.Language);
-
-        // 3. Initialisation du moniteur de logiciel métier
         _monitor = new BusinessSoftwareMonitor(_config);
-
-        // On dit au ViewModel : "Dès que le moniteur détecte un changement, préviens l'UI"
         _monitor.OnSoftwareDetectionChanged += (detected) => OnSoftwareDetectionEvent?.Invoke(detected);
 
-        // 4. Setup du service de chiffrement (CryptoSoft)
         string baseDir = AppDomain.CurrentDomain.BaseDirectory;
         string cryptoExe = OperatingSystem.IsWindows() ? "CryptoSoft.exe" : "CryptoSoft";
         string cryptoPath = Path.Combine(baseDir, cryptoExe);
         
-        // Debug: vérifier si CryptoSoft.exe existe
         System.Diagnostics.Debug.WriteLine($"[DEBUG] CryptoSoft recherché à: {cryptoPath}");
         System.Diagnostics.Debug.WriteLine($"[DEBUG] CryptoSoft existe: {File.Exists(cryptoPath)}");
         

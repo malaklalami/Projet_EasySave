@@ -36,16 +36,15 @@ public class BackupReportingService
             EncryptionTimeMs = result.EncryptionTimeMs
         };
 
-        // --- CORRECTION 2 : Utiliser LogTarget au lieu de LogStrategy ---
         var currentLogTarget = _configService.Current.LogTarget;
 
-        // Local ou Both
+        // Sauvegarde locale (fichier XML ou JSON)
         if (currentLogTarget == LogTarget.Local || currentLogTarget == LogTarget.Both)
         {
             _loggerService.Write(entry, _configService.Current.LogFormat == LogFormat.Json);
         }
 
-        // Remote ou Both
+        // Envoi réseau vers le serveur ConsoleDeportee
         if (currentLogTarget == LogTarget.Remote || currentLogTarget == LogTarget.Both)
         {
             _tcpLogger.SendLog(entry);
