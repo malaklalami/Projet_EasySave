@@ -5,5 +5,6 @@ public enum JobState
     Inactive,
     Active,
     Paused,
-    Waiting
+    Waiting,
+    Stopped
 }

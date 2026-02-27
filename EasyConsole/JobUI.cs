@@ -37,8 +37,12 @@ public class JobUI
         Console.Write(_vm.LanguageService.Get("Run_Input"));
         string input = Console.ReadLine() ?? "";
 
-        _=_vm.ExecuteSelection(input);
-        Console.WriteLine($"\n{_vm.LanguageService.Get("Run_Started")}");
+        Console.WriteLine($"\n>>> {_vm.LanguageService.Get("Run_Started")}");
+         _vm.ExecuteSelection(input);
+        Console.WriteLine($"\n<<< {_vm.LanguageService.Get("Run_Finished")}");
+
+        Console.WriteLine("\nAppuyez sur une touche pour revenir au menu...");
+        Console.ReadKey();
 
     }
 
@@ -57,20 +61,48 @@ public class JobUI
     public void EditJob()
     {
         Console.Write(_vm.LanguageService.Get("Edit_Select"));
+
         if (int.TryParse(Console.ReadLine(), out int i) && i >= 0 && i < _vm.Jobs.Count)
         {
             var job = _vm.Jobs[i];
             Console.WriteLine(_vm.LanguageService.Get("Edit_Title"));
 
+            // 1. Modification du NOM
             Console.Write($"{_vm.LanguageService.Get("Input_JobName")} [{job.Name}] : ");
-            string n = Console.ReadLine() ?? "";
+            string inputName = Console.ReadLine() ?? "";
+            string newName = string.IsNullOrWhiteSpace(inputName) ? job.Name : inputName;
 
-            // ... (Ici tu peux ajouter les autres champs source/target)
+            // 2. Modification de la SOURCE
+            Console.Write($"Source [{job.SourceDir}] : ");
+            string inputSrc = Console.ReadLine() ?? "";
+            string newSrc = string.IsNullOrWhiteSpace(inputSrc) ? job.SourceDir : inputSrc;
 
-            _vm.DeleteJob(job);
-            _vm.AddJob(string.IsNullOrWhiteSpace(n) ? job.Name : n, job.SourceDir, job.TargetDir, job.Type);
-            Console.WriteLine(string.Format(_vm.LanguageService.Get("Edit_Success"), i, n));
+            // 3. Modification de la DESTINATION
+            Console.Write($"Destination [{job.TargetDir}] : ");
+            string inputDest = Console.ReadLine() ?? "";
+            string newDest = string.IsNullOrWhiteSpace(inputDest) ? job.TargetDir : inputDest;
+
+            // 4. Modification du TYPE (0 = Complet, 1 = Différentiel)
+            Console.Write($"Type (0=Complet, 1=Différentiel) [{(int)job.Type}] : ");
+            string inputType = Console.ReadLine() ?? "";
+            BackupType newType = job.Type; // Par défaut, on garde l'ancien
+
+            if (!string.IsNullOrWhiteSpace(inputType))
+            {
+                if (inputType == "0") newType = BackupType.Full;
+                else if (inputType == "1") newType = BackupType.Differential;
+            }
+
+            // 5. ON APPELLE LE VIEWMODEL SANS DÉTRUIRE LE JOB !
+            _vm.EditJob(job, newName, newSrc, newDest, newType);
+
+            Console.WriteLine(string.Format(_vm.LanguageService.Get("Edit_Success"), i, newName));
         }
+        else
+        {
+            Console.WriteLine("Index invalide !"); // Petit message d'erreur si on tape n'importe quoi
+        }
+
         Thread.Sleep(1000);
     }
 }

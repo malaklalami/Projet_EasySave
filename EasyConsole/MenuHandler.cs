@@ -23,21 +23,21 @@ public class MenuHandler
             string input = Console.ReadLine()?.ToLower() ?? "";
 
             // Gestion des commandes de contrôle direct
-if (input.StartsWith("pause")) 
-        { 
-            HandleControlCommand(input, "pause"); // <--- Appel d'une méthode d'aide
-            continue; 
-        }
-        if (input.StartsWith("resume")) 
-        { 
-            HandleControlCommand(input, "resume"); // <--- Appel d'une méthode d'aide
-            continue; 
-        }
-        if (input.StartsWith("stop")) 
-        { 
-            HandleControlCommand(input, "stop"); // <--- Appel d'une méthode d'aide
-            continue; 
-        }
+            if (input.StartsWith("pause")) 
+            { 
+                HandleControlCommand(input, "pause"); // <--- Appel d'une méthode d'aide
+                continue; 
+            }
+            if (input.StartsWith("resume")) 
+            { 
+                HandleControlCommand(input, "resume"); // <--- Appel d'une méthode d'aide
+                continue; 
+            }
+            if (input.StartsWith("stop")) 
+            { 
+                HandleControlCommand(input, "stop"); // <--- Appel d'une méthode d'aide
+                continue; 
+            }
 
             switch (input)
             {

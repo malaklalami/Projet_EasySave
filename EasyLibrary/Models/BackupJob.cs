@@ -12,6 +12,8 @@ public class BackupJob
     public string SourceDir { get; set; } = string.Empty;
     public string TargetDir { get; set; } = string.Empty;
 
+    public int TotalFilesForThisJob { get; set; }
+
     [JsonIgnore] // On ne veut pas forcément le garder dans le JSON au redémarrage
     public bool IsPaused { get; set; } = false;
 

@@ -74,6 +74,10 @@ public static class JobControlService
         {
             IsPaused = false;
             IsStopped = false;
+            IsPausedAll = false; 
+            IsStoppedAll = false;
+
+            Monitor.PulseAll(_syncLock);
         }
     }
 

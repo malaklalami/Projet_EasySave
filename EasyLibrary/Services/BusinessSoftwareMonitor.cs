@@ -9,6 +9,8 @@ public class BusinessSoftwareMonitor
 {
     private readonly ConfigService _config;
 
+    public event Action<bool>? OnSoftwareDetectionChanged;
+
     // Ce flag permet de savoir si la pause actuelle vient du logiciel ou de l'utilisateur
     private bool _pauseTriggeredByBusinessSoftware = false;
 
@@ -35,18 +37,20 @@ public class BusinessSoftwareMonitor
             {
                 _pauseTriggeredByBusinessSoftware = true;
                 JobControlService.PauseAll();
+                OnSoftwareDetectionChanged?.Invoke(true);
             }
         }
         else
         {
             // On ne relance QUE si c'est le logiciel métier qui avait mis la pause
-            // (Optionnel : si tu veux que ça reprenne tout seul)
+            // (Optionnel : si on veut que ça reprenne tout seul)
             if (JobControlService.IsPausedAll && _pauseTriggeredByBusinessSoftware)
             {
                 // On passe la liste des jobs si on veut tout réveiller
                 // Ou on laisse l'utilisateur cliquer sur Resume manuellement pour plus de sécurité.
                 _pauseTriggeredByBusinessSoftware = false;
                 JobControlService.ResumeAll(allJobs);
+                OnSoftwareDetectionChanged?.Invoke(false);
             }
         }
     }

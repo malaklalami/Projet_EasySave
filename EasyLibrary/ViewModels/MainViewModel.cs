@@ -19,6 +19,12 @@ public class MainViewModel
     private readonly BackupService _backup;
     private readonly BusinessSoftwareMonitor _monitor;
 
+    public Action<bool>? OnSoftwareDetectionEvent { get; set; }
+
+    private readonly LoggerService _logger = new();
+    private readonly StateService _state = new();
+    private readonly BackupReportingService _reporter;
+
     // --- Propriétés Publiques ---
     public LanguageService LanguageService { get; } = new();
     public Settings Settings => _config.Current;
@@ -38,6 +44,9 @@ public class MainViewModel
         // 3. Initialisation du moniteur de logiciel métier
         _monitor = new BusinessSoftwareMonitor(_config);
 
+        // On dit au ViewModel : "Dès que le moniteur détecte un changement, préviens l'UI"
+        _monitor.OnSoftwareDetectionChanged += (detected) => OnSoftwareDetectionEvent?.Invoke(detected);
+
         // 4. Setup du service de chiffrement (CryptoSoft)
         string baseDir = AppDomain.CurrentDomain.BaseDirectory;
         string cryptoExe = OperatingSystem.IsWindows() ? "CryptoSoft.exe" : "CryptoSoft";
@@ -48,6 +57,9 @@ public class MainViewModel
 
         // 5. Initialisation du moteur de backup (Injection des 3 dépendances)
         _backup = new BackupService(_config, cryptoService, _monitor);
+
+        // On connecte le reporter au moteur pour qu'il écrive les logs et le state.json !
+        _reporter = new BackupReportingService(_backup, _logger, _state, _config);
 
         // On s'abonne aux mises à jour du moteur pour les renvoyer à l'UI
         _backup.OnProgress += (state) => OnProgressUpdate?.Invoke(state);
@@ -62,6 +74,7 @@ public class MainViewModel
     {
         // On transforme la saisie (ex: "1-3") en liste d'index
         var selectedIndices = JobParser.ParseSelection(input, Jobs.Count);
+
         var jobsToRun = selectedIndices.Select(i => Jobs[i]).ToList();
 
         if (jobsToRun.Any())
@@ -108,6 +121,25 @@ public class MainViewModel
 
         Jobs.Add(job);
         _manager.Save(Jobs.ToList());
+    }
+
+    public void EditJob(BackupJob jobToEdit, string newName, string newSrc, string newDest, BackupType newType)
+    {
+        if (jobToEdit == null) return;
+
+        // 1. On met à jour les propriétés de l'objet existant
+        jobToEdit.Name = newName;
+        jobToEdit.SourceDir = newSrc;
+        jobToEdit.TargetDir = newDest;
+        jobToEdit.Type = newType;
+
+        // 2. On sauvegarde la liste complète mise à jour dans le fichier (ex: jobs.json)
+        _manager.Save(Jobs.ToList());
+
+        // Note : Si l'UI (WPF) ne se rafraîchit pas toute seule quand on modifie un job, 
+        // on peut forcer le rafraîchissement en remplaçant l'objet dans la liste :
+        // int index = Jobs.IndexOf(jobToEdit);
+        // Jobs[index] = jobToEdit; 
     }
 
     public void DeleteJob(BackupJob job)

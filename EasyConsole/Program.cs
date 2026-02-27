@@ -1,6 +1,7 @@
 ﻿using EasySave.ViewModels;
 using System;
 using System.Threading.Tasks;
+using EasySave.Services;
 
 namespace EasyConsole;
 
@@ -10,6 +11,18 @@ class Program
     {
         // Initialisation du ViewModel (charge les jobs et la langue)
         MainViewModel viewModel = new MainViewModel();
+
+        viewModel.OnSoftwareDetectionEvent += (isDetected) =>
+        {
+            if (isDetected)
+            {
+                Console.WriteLine($"\n {viewModel.LanguageService.Get("Software_Detected")}\n");
+            }
+            else
+            {
+                Console.WriteLine($"\n {viewModel.LanguageService.Get("Software_Closed")}\n");
+            }
+        };
 
         if (args.Length > 0)
         {
@@ -25,7 +38,7 @@ class Program
         {
             // Mode Interactif (Menu)
             MenuHandler menu = new MenuHandler(viewModel);
-            menu.Run();
+            await menu.Run();
         }
     }
 }
